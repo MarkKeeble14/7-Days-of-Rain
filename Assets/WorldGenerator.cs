@@ -5,6 +5,7 @@ public class WorldGenerator : MonoBehaviour
 {
     [SerializeField] private GroundGenerator groundGenerator;
     [SerializeField] private PopulateWithFoliage populateWithFoliage;
+    [SerializeField] private CropSpawner[] spawnCropsOnGenerate;
 
     private void Awake()
     {
@@ -17,12 +18,14 @@ public class WorldGenerator : MonoBehaviour
 
         yield return new WaitForSeconds(0.05f);
 
-        foreach (CropSpawner cropSpawner in GetComponentsInChildren<CropSpawner>())
+        foreach (CropSpawner cropSpawner in spawnCropsOnGenerate)
         {
             cropSpawner.Generate();
         }
 
         yield return new WaitForSeconds(0.05f);
         populateWithFoliage.Populate();
+
+        GameManager._Instance.LockTotalCropCount();
     }
 }

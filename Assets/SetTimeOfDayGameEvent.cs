@@ -3,7 +3,7 @@
 public enum TimeOfDayLabel
 {
     MORNING,
-    MIDDAY,
+    AFTERNOON,
     EVENING,
     NIGHT,
     MIDNIGHT

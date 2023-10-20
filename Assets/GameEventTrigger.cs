@@ -4,28 +4,44 @@
 public abstract class GameEventTrigger : MonoBehaviour
 {
     [SerializeField] private GameEvent[] triggersEvents;
+    [SerializeField] private GameEventTriggerAdditionalCondition[] additionalShowConditions;
     [SerializeField] private GameEventTriggerAdditionalCondition[] additionalTriggerConditions;
     [SerializeField] private bool destroyOnTrigger;
     private bool canTrigger = true;
 
-    public bool PassesAdditionalConditions
+    private bool PassesConditions(GameEventTriggerAdditionalCondition[] conditions, bool allowDialogueOnFail)
     {
-        get
+        if (conditions.Length <= 0) return true;
+        foreach (GameEventTriggerAdditionalCondition condition in conditions)
         {
-            if (additionalTriggerConditions.Length <= 0) return true;
-            foreach (GameEventTriggerAdditionalCondition condition in additionalTriggerConditions)
+            if (!condition.Condition())
             {
-                if (!condition.Condition())
-                    return false;
+                if (allowDialogueOnFail)
+                {
+                    DialogueManager._Instance.StartCoroutine(DialogueManager._Instance.ExecuteDialogue(condition.DialogueOnFailCondition));
+                }
+                return false;
             }
-            return true;
         }
+        return true;
     }
 
-
-    public void Trigger()
+    public bool DoesPassAdditionalShowConditions()
     {
-        if (!canTrigger || !PassesAdditionalConditions) return;
+        return PassesConditions(additionalShowConditions, false);
+    }
+
+    public bool DoesPassAdditionalTriggerConditions()
+    {
+        return PassesConditions(additionalTriggerConditions, true);
+    }
+
+    public void Trigger(bool overrideChecks = false)
+    {
+        if (!overrideChecks)
+        {
+            if (!canTrigger || !DoesPassAdditionalTriggerConditions()) return;
+        }
         canTrigger = false;
 
         // Activate all attatched Events

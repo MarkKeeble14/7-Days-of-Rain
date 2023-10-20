@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
+
 public class TransitionIntoGameEventGameEvent : GameEvent
 {
     [SerializeField] private GameEvent[] gameEvents;
@@ -6,12 +8,16 @@ public class TransitionIntoGameEventGameEvent : GameEvent
     [SerializeField] private float delayAfterOut;
     [SerializeField] private float delayAfterIn;
     [SerializeField] private bool lockInput;
+    [SerializeField] private bool useIn = true;
+    [SerializeField] private bool useOut = true;
 
     protected override void Activate()
     {
-        AnimationActionSequenceEntry[] animationSequence = new AnimationActionSequenceEntry[2];
-        animationSequence[0] = new AnimationActionSequenceEntry(animationName, null, () => ActivateGameEvents(), delayAfterOut, false, lockInput);
-        animationSequence[1] = new AnimationActionSequenceEntry(animationName, null, null, delayAfterIn, true, lockInput);
+        List<AnimationActionSequenceEntry> animationSequence = new List<AnimationActionSequenceEntry>();
+        if (useOut)
+            animationSequence.Add(new AnimationActionSequenceEntry(animationName, null, () => ActivateGameEvents(), delayAfterOut, false, lockInput));
+        if (useIn)
+            animationSequence.Add(new AnimationActionSequenceEntry(animationName, null, null, delayAfterIn, true, lockInput));
 
         TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
     }

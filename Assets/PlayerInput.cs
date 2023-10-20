@@ -7,7 +7,7 @@ public class PlayerInput : MonoBehaviour
     public bool MoveLeft => Input.GetKey(KeyCode.A) && !LockInput;
     public bool MoveDown => Input.GetKey(KeyCode.S) && !LockInput;
     public bool MoveRight => Input.GetKey(KeyCode.D) && !LockInput;
-    public bool Sprinting => Input.GetKey(KeyCode.LeftShift)
+    public bool Sprinting => Input.GetKey(KeyCode.LeftShift) && CanSprintDisplayController._Instance.CanSprint
         && (GameManager._Instance.CurrentLocationState == PlayerLocationState.EXTERIOR || GameManager._Instance.CurrentLocationState == PlayerLocationState.SPAWN) && !LockInput;
     public bool LookUp => Input.GetKey(KeyCode.UpArrow) && !LockInput;
     public bool LookDown => Input.GetKey(KeyCode.DownArrow) && !LockInput;

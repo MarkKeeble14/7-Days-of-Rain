@@ -12,6 +12,9 @@ public class TransitionManager : MonoBehaviour
 
     [SerializeField] private PlayerInput p_Input;
     [SerializeField] private string playOnStart = "";
+    [SerializeField] private float delayOnStartTransitionBy;
+
+    [SerializeField] private CanvasGroup cv;
 
     public bool Transitioning { get; private set; }
 
@@ -28,8 +31,13 @@ public class TransitionManager : MonoBehaviour
     {
         if (playOnStart.Length > 0)
         {
-            StartCoroutine(Transition(PlayIn(playOnStart)));
+            StartCoroutine(Transition(PlayIn(playOnStart, delayOnStartTransitionBy)));
         }
+    }
+
+    private void Update()
+    {
+        cv.blocksRaycasts = Transitioning;
     }
 
     public IEnumerator Transition(IEnumerator enumerator, bool lockInput = false)
@@ -43,8 +51,10 @@ public class TransitionManager : MonoBehaviour
         Transitioning = false;
     }
 
-    private IEnumerator PlayIn(string key, Action onStart = null, Action onEnd = null)
+    private IEnumerator PlayIn(string key, float delay, Action onStart = null, Action onEnd = null)
     {
+        yield return new WaitForSeconds(delay);
+
         onStart?.Invoke();
         if (animationMap.ContainsKey(key))
         {
@@ -53,7 +63,7 @@ public class TransitionManager : MonoBehaviour
         onEnd?.Invoke();
     }
 
-    private IEnumerator PlayOut(string key, Action onStart = null, Action onEnd = null)
+    private IEnumerator PlayOut(string key, float delay, Action onStart = null, Action onEnd = null)
     {
         onStart?.Invoke();
         if (animationMap.ContainsKey(key))
@@ -61,6 +71,11 @@ public class TransitionManager : MonoBehaviour
             yield return StartCoroutine(animationMap[key].Out());
         }
         onEnd?.Invoke();
+    }
+
+    public IEnumerator PlayAnimationWithActionsInBetween(List<AnimationActionSequenceEntry> animationSequenceData)
+    {
+        yield return PlayAnimationWithActionsInBetween(animationSequenceData.ToArray());
     }
 
     public IEnumerator PlayAnimationWithActionsInBetween(AnimationActionSequenceEntry[] animationSequenceData)
@@ -71,11 +86,11 @@ public class TransitionManager : MonoBehaviour
 
             if (data.IsIn)
             {
-                yield return StartCoroutine(Transition(PlayIn(data.AnimationKey, data.OnStart, data.OnEnd), data.LockInput));
+                yield return StartCoroutine(Transition(PlayIn(data.AnimationKey, 0, data.OnStart, data.OnEnd), data.LockInput));
             }
             else
             {
-                yield return StartCoroutine(Transition(PlayOut(data.AnimationKey, data.OnStart, data.OnEnd), data.LockInput));
+                yield return StartCoroutine(Transition(PlayOut(data.AnimationKey, 0, data.OnStart, data.OnEnd), data.LockInput));
             }
 
             yield return new WaitForSeconds(data.TimeAfter);

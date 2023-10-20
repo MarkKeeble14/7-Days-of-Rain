@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using UnityEngine;
+using TMPro;
 
 public class DayNightManager : MonoBehaviour
 {
@@ -19,6 +20,9 @@ public class DayNightManager : MonoBehaviour
     private float nextTimeOfDayBreakpoint;
     private TimeOfDayLabel nextTimeOfDayLabel;
 
+    [SerializeField] private TextMeshProUGUI clockText;
+    [SerializeField] private TextMeshProUGUI timeOfDayText;
+
     [Header("Force Sleep")]
     [SerializeField] private float forceSleepAtTODTimerValue;
     private bool canForceSleep = true;
@@ -27,7 +31,22 @@ public class DayNightManager : MonoBehaviour
     private NightLight[] nightLights;
     private GameObjectState currentNightLightsState;
 
+    [Header("Calendar")]
+    [SerializeField] private int startDay;
+    public int StartDay => startDay;
+    [SerializeField] private int endDay;
+    public int EndDay => endDay;
+    [SerializeField] private Calendar calendar;
+    public bool HasCrossedOutToday { get; private set; }
     public static DayNightManager _Instance { get; private set; }
+
+    [SerializeField] private ToDoList toDoList;
+
+    public void ResetHasCrossedOutToday()
+    {
+        HasCrossedOutToday = false;
+    }
+
 
     private void Awake()
     {
@@ -40,6 +59,16 @@ public class DayNightManager : MonoBehaviour
         SetNextTimeOfDayBreakpoint();
 
         EnableTimeFlow = true;
+
+        TimeOfDay = (timeOfDayTimer % maxTimeOfDay) / maxTimeOfDay;
+        UpdateLighting(TimeOfDay);
+    }
+
+    public void CrossoutCurrentDay()
+    {
+        calendar.CrossoutDay(startDay + GameManager._Instance.CurrentDay);
+        toDoList.CheckListItem("CrossoutDay");
+        HasCrossedOutToday = true;
     }
 
     private void CatchUpTimerToCurrentTimeOfDay()
@@ -78,13 +107,39 @@ public class DayNightManager : MonoBehaviour
         SetNextTimeOfDayBreakpoint();
     }
 
+    private void SetClockText()
+    {
+        // Get Integer part of timer
+        int fp = Mathf.FloorToInt(timeOfDayTimer);
+        int adjustedFp = fp;
+        if (adjustedFp > 24)
+        {
+            adjustedFp -= 24;
+        }
+        string fpStr = adjustedFp.ToString();
+        if (fpStr.Length == 1)
+            fpStr = "0" + fpStr;
+
+        // from decimal part of timer, convert to 60 rep
+        float spd = (timeOfDayTimer - fp) * 60;
+        int sp = Mathf.RoundToInt(spd);
+        string spStr = sp.ToString();
+        if (spStr.Length == 1)
+            spStr = "0" + spStr;
+
+        clockText.text = fpStr + ":" + spStr;
+        timeOfDayText.text = CurrentTimeOfDayLabel.ToString();
+    }
+
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.N)) SetTimeOfDay(TimeOfDayLabel.EVENING);
+        SetClockText();
 
         if (preset == null) return;
 
-        if (EnableTimeFlow)
+        if (GameManager._Instance.BeingForcedInsideForBeingTooCold) return;
+
+        if (EnableTimeFlow && GameManager._Instance.GameStarted)
         {
             timeOfDayTimer += Time.deltaTime * timeScale;
             TimeOfDay = (timeOfDayTimer % maxTimeOfDay) / maxTimeOfDay;

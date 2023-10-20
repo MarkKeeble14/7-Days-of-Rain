@@ -17,31 +17,79 @@ public class Crop : MonoBehaviour
     private MeshFilter meshFilter;
     private MeshRenderer meshRenderer;
     public bool HasGrownToday { get; private set; }
+    [SerializeField] private GameObject root;
+    [SerializeField] private Vector2 chanceToDie;
+    [SerializeField] private int numDaysLeftUntendedToDie;
+    private int currentNumDaysUntended;
+
+    [SerializeField] private MeshData deadState;
+    [SerializeField] private Transform rootTransform;
+    [SerializeField] private Vector3 deadScale = Vector3.one;
+    public bool IsDead { get; private set; }
+    public static int GrowGoalToday { get; set; }
+    public static int NumGrownToday { get; set; }
 
     private void Awake()
     {
         meshFilter = GetComponent<MeshFilter>();
         meshRenderer = GetComponent<MeshRenderer>();
-        Set();
+        GameManager._Instance.CropCount++;
+        GameManager._Instance.OnEndOfDay += RunOnSleep;
+        Set(meshOfStages[currentStage]);
     }
 
-    private void Start()
+    private void RunOnSleep()
     {
-        GameManager._Instance.OnSleep += () => HasGrownToday = false;
+        if (!HasGrownToday)
+        {
+            currentNumDaysUntended++;
+            if (currentNumDaysUntended >= numDaysLeftUntendedToDie)
+            {
+                if (RandomHelper.EvaluateChanceTo(chanceToDie))
+                {
+                    Die();
+                }
+            }
+        }
+        else
+        {
+            currentNumDaysUntended = 0;
+            HasGrownToday = false;
+        }
     }
 
-    private void Set()
+    private void Set(MeshData data)
     {
-        meshFilter.mesh = meshOfStages[currentStage].Mesh;
-        meshRenderer.material = meshOfStages[currentStage].Mat;
+        meshFilter.mesh = data.Mesh;
+        meshRenderer.material = data.Mat;
     }
 
     [ContextMenu("Grow")]
     public void Grow()
     {
-        currentStage++;
-        if (currentStage > meshOfStages.Length) return;
-        Set();
+        if (IsDead) return;
+
         HasGrownToday = true;
+        currentStage++;
+        if (currentStage <= meshOfStages.Length)
+        {
+            Set(meshOfStages[currentStage]);
+        }
+
+        NumGrownToday++;
+        if (NumGrownToday >= GrowGoalToday)
+        {
+            GameManager._Instance.CheckToDoItem("TendCrops");
+        }
+    }
+
+    [ContextMenu("Die")]
+    public void Die()
+    {
+        if (IsDead) return;
+        IsDead = true;
+        Set(deadState);
+        rootTransform.localScale = deadScale;
+        GameManager._Instance.CropCount--;
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -175,13 +176,14 @@ public class Utils
         }
     }
 
-    public static IEnumerator ChangeCanvasGroupAlpha(CanvasGroup cv, float target, float changeRate)
+    public static IEnumerator ChangeCanvasGroupAlpha(CanvasGroup cv, float target, float changeRate, Action onEnd = null)
     {
         while (cv.alpha != target)
         {
             cv.alpha = Mathf.MoveTowards(cv.alpha, target, Time.deltaTime * changeRate);
             yield return null;
         }
+        onEnd?.Invoke();
     }
 
     public static IEnumerator ChangeColor(Image image, Color target, float changeRate)
@@ -344,5 +346,23 @@ public class Utils
         float linear = Mathf.Pow(10.0f, dB / 20.0f);
 
         return linear;
+    }
+
+    public static bool ApplicationIsAboutToExitPlayMode()
+    {
+#if UNITY_EDITOR
+        return EditorApplication.isPlayingOrWillChangePlaymode && Application.isPlaying;
+#else
+            return false;
+#endif
+    }
+
+    public static bool ApplicationIsAboutToEnterPlayMode()
+    {
+#if UNITY_EDITOR
+        return EditorApplication.isPlayingOrWillChangePlaymode && !Application.isPlaying;
+#else
+        return false;
+#endif
     }
 }

@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
+using System.Linq;
 
 public class ShowGameEventTriggerOpporotunity : MonoBehaviour
 {
@@ -13,137 +14,134 @@ public class ShowGameEventTriggerOpporotunity : MonoBehaviour
 
     [SerializeField] private Transform spawnOn;
     private Dictionary<GameEventTriggerOnKeyPress, TextMeshProUGUI> spawnedOpporotunities = new Dictionary<GameEventTriggerOnKeyPress, TextMeshProUGUI>();
-    private GameEventTriggerOnKeyPress currentlyDisplayedEventTrigger;
 
-    private List<GameEventTriggerOnKeyPress> availableTriggers = new List<GameEventTriggerOnKeyPress>();
+    private Dictionary<GameEventTriggerOnKeyPress, KeyCode> spawnedTriggers = new Dictionary<GameEventTriggerOnKeyPress, KeyCode>();
+    [SerializeField] private SerializableDictionary<KeyCode, bool> keyCodeInUseMap = new SerializableDictionary<KeyCode, bool>();
+    private GameEventTriggerOnKeyPress triggeredThisKeyPress;
 
     [Header("References")]
     [SerializeField] private Transform player;
     [SerializeField] private TextMeshProUGUI textPrefab;
 
+    public bool Enable { get; set; }
+
     private void Update()
     {
-        if (Input.GetKeyDown(GameManager._Instance.PlayerInteractKey) && currentlyDisplayedEventTrigger != null)
+        if (!Enable)
         {
-            currentlyDisplayedEventTrigger.Trigger();
-            RemoveTrigger(currentlyDisplayedEventTrigger);
-            Destroy(currentlyDisplayedEventTrigger);
+            Clear();
+            return;
+        }
+
+        foreach (KeyValuePair<GameEventTriggerOnKeyPress, KeyCode> kvp in spawnedTriggers)
+        {
+            if (triggeredThisKeyPress != null) break;
+            if (!Input.GetKeyDown(kvp.Value)) continue;
+            triggeredThisKeyPress = kvp.Key;
+        }
+
+        if (triggeredThisKeyPress != null)
+        {
+            triggeredThisKeyPress.Trigger();
+            if (triggeredThisKeyPress.ShouldDisableOpperotunityOnTrigger)
+            {
+                TryRemoveTrigger(triggeredThisKeyPress);
+            }
+            triggeredThisKeyPress = null;
         }
     }
 
     public void TryAddTrigger(GameEventTriggerOnKeyPress trigger)
     {
-        if (!availableTriggers.Contains(trigger))
+        if (!Enable) return;
+        if (GameManager._Instance.BeingForcedInsideForBeingTooCold || GameManager._Instance.BeingForcedToSleep)
         {
-            availableTriggers.Add(trigger);
-        }
-        UpdateShownTrigger();
-    }
-
-    public void RemoveTrigger(GameEventTriggerOnKeyPress trigger)
-    {
-        availableTriggers.Remove(trigger);
-        UpdateShownTrigger();
-    }
-
-    private void UpdateShownTrigger()
-    {
-        GameEventTriggerOnKeyPress toShow = GetClosestAvailableTrigger();
-        if (availableTriggers.Count == 0 || toShow == null)
-        {
-            Destroy(currentlyDisplayedEventTrigger);
             return;
         }
-        Spawn(toShow);
-    }
 
-    private GameEventTriggerOnKeyPress GetClosestAvailableTrigger()
-    {
-        if (availableTriggers.Count == 0)
+        if (!spawnedTriggers.ContainsKey(trigger))
         {
-            return null;
-        }
-        else if (availableTriggers.Count == 1)
-        {
-            if (availableTriggers[0].PassesAdditionalConditions)
-            {
-                return availableTriggers[0];
-            }
-            else
-            {
-                return null;
-            }
-        }
-        else
-        {
-            List<GameEventTriggerOnKeyPress> passingTriggers = new List<GameEventTriggerOnKeyPress>();
-            foreach (GameEventTriggerOnKeyPress trigger in availableTriggers)
-            {
-                if (trigger.PassesAdditionalConditions)
-                {
-                    passingTriggers.Add(trigger);
-                }
-            }
+            // Get Key Code
+            KeyCode key = GetUnusedKeyCode();
+            // No available key codes
+            if (key == KeyCode.None) return;
+            keyCodeInUseMap[key] = true;
 
-            if (passingTriggers.Count == 0)
-            {
-                return null;
-            }
-            else if (passingTriggers.Count == 1)
-            {
-                return passingTriggers[0];
-            }
-            else
-            {
-                GameEventTriggerOnKeyPress closestTrigger = passingTriggers[0];
-                float closestDistance = Vector3.Distance(closestTrigger.transform.position, player.position);
-                for (int i = 1; i < passingTriggers.Count; i++)
-                {
-                    GameEventTriggerOnKeyPress currentTrigger = passingTriggers[i];
-                    float currentDistance = Vector3.Distance(currentTrigger.transform.position, player.position);
-                    if (currentDistance < closestDistance)
-                    {
-                        closestTrigger = currentTrigger;
-                        closestDistance = currentDistance;
-                    }
-                }
-                return closestTrigger;
-            }
-
+            spawnedTriggers.Add(trigger, key);
+            Spawn(trigger, key);
         }
     }
 
-    public void Spawn(GameEventTriggerOnKeyPress spawningFor)
+    public void TryRemoveTrigger(GameEventTriggerOnKeyPress trigger)
     {
-        if (currentlyDisplayedEventTrigger == spawningFor) return;
-        if (currentlyDisplayedEventTrigger != null) Destroy(currentlyDisplayedEventTrigger);
-        currentlyDisplayedEventTrigger = spawningFor;
+        if (!spawnedTriggers.ContainsKey(trigger)) return;
 
+        ReleaseKeyCode(spawnedTriggers[trigger]);
+        spawnedTriggers.Remove(trigger);
+
+        // Destroy Object
+        Destroy(trigger);
+
+        RedoKeyCodes();
+    }
+
+    public void Spawn(GameEventTriggerOnKeyPress spawningFor, KeyCode mapping)
+    {
+        // Spawn
         TextMeshProUGUI spawned = Instantiate(textPrefab, spawnOn);
-        spawned.text = spawningFor.ActivationText;
+        spawned.text = "'" + mapping.ToString()[mapping.ToString().Length - 1] + "' to " + spawningFor.ActivationText;
         spawnedOpporotunities.Add(spawningFor, spawned);
     }
 
     public void Destroy(GameEventTriggerOnKeyPress destroyingFor)
     {
-        if (destroyingFor == null) return;
-
-        // Check to make sure event exists in map
-        if (!spawnedOpporotunities.ContainsKey(destroyingFor)) return;
-
         // Destroy
         TextMeshProUGUI spawned = spawnedOpporotunities[destroyingFor];
         spawnedOpporotunities.Remove(destroyingFor);
         Destroy(spawned.gameObject);
-
-        currentlyDisplayedEventTrigger = null;
     }
 
-    public void ClearCurrent()
+    public void Clear()
     {
-        if (currentlyDisplayedEventTrigger != null)
+        while (spawnedTriggers.Count > 0)
         {
-            Destroy(currentlyDisplayedEventTrigger);
+            TryRemoveTrigger(spawnedTriggers.First().Key);
         }
+    }
+
+    private KeyCode GetUnusedKeyCode()
+    {
+        foreach (KeyCode key in keyCodeInUseMap.Keys())
+        {
+            if (!keyCodeInUseMap[key])
+            {
+                return key;
+            }
+        }
+        return KeyCode.None;
+    }
+
+    private void RedoKeyCodes()
+    {
+        List<GameEventTriggerOnKeyPress> events = new List<GameEventTriggerOnKeyPress>();
+        foreach (KeyValuePair<GameEventTriggerOnKeyPress, KeyCode> kvp in spawnedTriggers)
+        {
+            events.Add(kvp.Key);
+            ReleaseKeyCode(kvp.Value);
+        }
+
+        foreach (GameEventTriggerOnKeyPress gameEvent in events)
+        {
+            KeyCode key = GetUnusedKeyCode();
+            Destroy(gameEvent);
+            keyCodeInUseMap[key] = true;
+            spawnedTriggers[gameEvent] = key;
+            Spawn(gameEvent, key);
+        }
+    }
+
+    private void ReleaseKeyCode(KeyCode key)
+    {
+        keyCodeInUseMap[key] = false;
     }
 }
