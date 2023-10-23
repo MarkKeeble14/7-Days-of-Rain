@@ -161,7 +161,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float inCoyoteSequenceAmbientTimerMod = 3;
     [SerializeField] private Dialogue[] firstCoyoteDialogue;
     private bool hasPlayedCoyoteDialogue;
-    private bool inCoyoteSequence = true;
+    private bool inCoyoteSequence;
     private float coyoteAmbientTimer;
 
     [Header("Spooky Wind")]
@@ -261,11 +261,11 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        SetDayData();
-        LoadState(CurrentLocationState);
-
-        ShowGameEventTriggerOpporotunity._Instance.Enable = false;
         p_Input.LockInput = true;
+        SetDayData();
+
+        LoadState(CurrentLocationState);
+        ShowGameEventTriggerOpporotunity._Instance.Enable = false;
     }
 
     private void Update()
@@ -388,6 +388,18 @@ public class GameManager : MonoBehaviour
         // Enable/Disable Objects
         EnableForGivenState(data);
         SetMixerState();
+
+        if (PlayerIsInside)
+        {
+            if (inCoyoteSequence)
+            {
+                EndCoyoteSequence();
+            }
+            if (inMonsterSequence)
+            {
+                EndMonsterSequence();
+            }
+        }
     }
 
     private void SetMixerState()
@@ -397,11 +409,6 @@ public class GameManager : MonoBehaviour
             audioMixer.SetFloat("AmbienceVol", Utils.LinearToDecibel(interiorAmbienceVol));
             audioMixer.SetFloat("AmbienceLowPassFreq", interiorLowpassFreq);
             audioMixer.SetFloat("ExternalSFXLowPassFreq", interiorLowpassFreq);
-
-            // Technically hacky but works I think
-            // Player is now inside so
-            EndMonsterSequence();
-            EndCoyoteSequence();
         }
         else
         {

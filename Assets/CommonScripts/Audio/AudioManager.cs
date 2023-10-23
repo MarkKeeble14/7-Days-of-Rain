@@ -45,10 +45,6 @@ public class AudioManager : MonoBehaviour
 
     private void Start()
     {
-        // Music Volume
-        SetMusicVolume(defaultMusicVolume);
-        musicVolumeSlider.value = defaultMusicVolume;
-
         // SFX Volume
         SetSFXVolume(defaultSFXVolume);
         sfxVolumeSlider.value = defaultSFXVolume;
@@ -86,12 +82,6 @@ public class AudioManager : MonoBehaviour
     public void PlayFromSFXDict(string key)
     {
         StartCoroutine(PlayFromSourceUninterrupted(sfxDict[key]));
-    }
-
-    public void SetMusicVolume(float percent)
-    {
-        if (percent <= 0) percent = minPercent;
-        mixer.SetFloat("MusicVol", Mathf.Log10(percent) * 20);
     }
 
     public void SetSFXVolume(float percent)

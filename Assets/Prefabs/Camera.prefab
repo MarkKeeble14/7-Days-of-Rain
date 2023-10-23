@@ -128,8 +128,8 @@ MonoBehaviour:
   sprintingHeadBobSpeedMod: 1.25
   p_Input: {fileID: 0}
   p_Footsteps: {fileID: 0}
-  transitionPosGrace: 1
-  transitionRotGrace: 1
+  transitionPosGrace: 0.25
+  transitionRotGrace: 0.25
   playerLookSpeed: 2.5
   verticalLookBounds: {x: -45, y: 45}
   horizontalLookBounds: {x: -45, y: 45}
