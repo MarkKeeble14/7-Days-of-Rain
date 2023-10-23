@@ -3,7 +3,10 @@ using UnityEngine;
 
 public class TransitionIntoGameEventGameEvent : GameEvent
 {
-    [SerializeField] private GameEvent[] gameEvents;
+    [SerializeField] private GameEvent[] preOutGameEvents;
+    [SerializeField] private GameEvent[] postOutGameEvents;
+    [SerializeField] private GameEvent[] preInGameEvents;
+    [SerializeField] private GameEvent[] postInGameEvents;
     [SerializeField] private string animationName;
     [SerializeField] private float delayAfterOut;
     [SerializeField] private float delayAfterIn;
@@ -15,16 +18,26 @@ public class TransitionIntoGameEventGameEvent : GameEvent
     {
         List<AnimationActionSequenceEntry> animationSequence = new List<AnimationActionSequenceEntry>();
         if (useOut)
-            animationSequence.Add(new AnimationActionSequenceEntry(animationName, null, () => ActivateGameEvents(), delayAfterOut, false, lockInput));
+        {
+            animationSequence.Add(new AnimationActionSequenceEntry(animationName,
+                () => ActivateGameEvents(preOutGameEvents),
+                () => ActivateGameEvents(postOutGameEvents),
+                delayAfterOut, false, lockInput));
+        }
         if (useIn)
-            animationSequence.Add(new AnimationActionSequenceEntry(animationName, null, null, delayAfterIn, true, lockInput));
+        {
+            animationSequence.Add(new AnimationActionSequenceEntry(animationName,
+                () => ActivateGameEvents(preInGameEvents),
+                () => ActivateGameEvents(postInGameEvents),
+                delayAfterIn, true, lockInput));
+        }
 
         TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
     }
 
-    private void ActivateGameEvents()
+    private void ActivateGameEvents(GameEvent[] events)
     {
-        foreach (GameEvent gameEvent in gameEvents)
+        foreach (GameEvent gameEvent in events)
         {
             gameEvent.CallActivate();
         }

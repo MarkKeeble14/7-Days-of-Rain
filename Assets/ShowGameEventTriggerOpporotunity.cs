@@ -24,10 +24,13 @@ public class ShowGameEventTriggerOpporotunity : MonoBehaviour
     [SerializeField] private TextMeshProUGUI textPrefab;
 
     public bool Enable { get; set; }
+    private bool active => Enable
+        && !TransitionManager._Instance.Transitioning
+        && !GameManager._Instance.BeingForcedInsideForBeingTooCold && !GameManager._Instance.BeingForcedToSleep;
 
     private void Update()
     {
-        if (!Enable)
+        if (!active)
         {
             Clear();
             return;
@@ -53,12 +56,13 @@ public class ShowGameEventTriggerOpporotunity : MonoBehaviour
 
     public void TryAddTrigger(GameEventTriggerOnKeyPress trigger)
     {
-        if (!Enable) return;
-        if (GameManager._Instance.BeingForcedInsideForBeingTooCold || GameManager._Instance.BeingForcedToSleep)
-        {
-            return;
-        }
+        if (!active) return;
 
+        AddTrigger(trigger);
+    }
+
+    private void AddTrigger(GameEventTriggerOnKeyPress trigger)
+    {
         if (!spawnedTriggers.ContainsKey(trigger))
         {
             // Get Key Code

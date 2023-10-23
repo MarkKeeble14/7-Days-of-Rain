@@ -35,6 +35,6 @@ public class PlayerMovement : MonoBehaviour
         Vector3 forwardMovement = transform.forward * moveDirection.z;
         Vector3 horizontalMovement = transform.right * moveDirection.x;
         Vector3 movement = Vector3.ClampMagnitude(forwardMovement + horizontalMovement, 1);
-        transform.Translate(movement * moveSpeed * (p_Input.Sprinting ? sprintSpeedModifier : 1) * Time.deltaTime, Space.World);
+        transform.Translate(movement * moveSpeed * (p_Input.Sprinting ? sprintSpeedModifier : 1) * GameManager._Instance.SatedSpeedModifier * Time.deltaTime, Space.World);
     }
 }

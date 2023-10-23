@@ -16,6 +16,17 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private Transform parentSpawnedTo;
     [SerializeField] private AudioSource audioSourcePrefab;
 
+    [Header("Settings")]
+    [SerializeField] private float minPercent = 0.0001f;
+    [SerializeField] private Slider musicVolumeSlider;
+    [SerializeField] private float defaultMusicVolume = 0.8f;
+
+    [SerializeField] private Slider sfxVolumeSlider;
+    [SerializeField] private float defaultSFXVolume = 0.8f;
+
+    [SerializeField] private Slider ambienceVolumeSlider;
+    [SerializeField] private float defaultAmbienceVolume = 0.8f;
+
     public static AudioManager _Instance { get; private set; }
 
     private void Awake()
@@ -30,6 +41,21 @@ public class AudioManager : MonoBehaviour
 
         audioSourceArray = new List<AudioSource>();
         audioSourceArray.AddRange(audioSourceHolder.GetComponentsInChildren<AudioSource>());
+    }
+
+    private void Start()
+    {
+        // Music Volume
+        SetMusicVolume(defaultMusicVolume);
+        musicVolumeSlider.value = defaultMusicVolume;
+
+        // SFX Volume
+        SetSFXVolume(defaultSFXVolume);
+        sfxVolumeSlider.value = defaultSFXVolume;
+
+        // Ambience Volume
+        SetAmbienceVolume(defaultAmbienceVolume);
+        ambienceVolumeSlider.value = defaultAmbienceVolume;
     }
 
     private AudioSource GetAudioSource()
@@ -60,5 +86,23 @@ public class AudioManager : MonoBehaviour
     public void PlayFromSFXDict(string key)
     {
         StartCoroutine(PlayFromSourceUninterrupted(sfxDict[key]));
+    }
+
+    public void SetMusicVolume(float percent)
+    {
+        if (percent <= 0) percent = minPercent;
+        mixer.SetFloat("MusicVol", Mathf.Log10(percent) * 20);
+    }
+
+    public void SetSFXVolume(float percent)
+    {
+        if (percent <= 0) percent = minPercent;
+        mixer.SetFloat("SFXVol", Mathf.Log10(percent) * 20);
+    }
+
+    public void SetAmbienceVolume(float percent)
+    {
+        if (percent <= 0) percent = minPercent;
+        mixer.SetFloat("AmbienceVol", Mathf.Log10(percent) * 20);
     }
 }

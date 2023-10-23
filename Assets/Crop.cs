@@ -21,6 +21,7 @@ public class Crop : MonoBehaviour
     [SerializeField] private Vector2 chanceToDie;
     [SerializeField] private int numDaysLeftUntendedToDie;
     private int currentNumDaysUntended;
+    public bool ReadyForHarvest => currentStage == meshOfStages.Length - 1;
 
     [SerializeField] private MeshData deadState;
     [SerializeField] private Transform rootTransform;
@@ -28,14 +29,25 @@ public class Crop : MonoBehaviour
     public bool IsDead { get; private set; }
     public static int GrowGoalToday { get; set; }
     public static int NumGrownToday { get; set; }
+    public static int NumSpawned { get; set; }
+    public static int NumHarvested { get; private set; }
+    public static int NumDead { get; private set; }
+
+    [SerializeField] private TemporaryAudioSourceSpawner tempAudioSource;
+    [SerializeField] private RandomClipAudioClipContainer onHarvest;
 
     private void Awake()
     {
         meshFilter = GetComponent<MeshFilter>();
         meshRenderer = GetComponent<MeshRenderer>();
-        GameManager._Instance.CropCount++;
         GameManager._Instance.OnEndOfDay += RunOnSleep;
+        NumSpawned++;
         Set(meshOfStages[currentStage]);
+    }
+
+    private void OnDestroy()
+    {
+        GameManager._Instance.OnEndOfDay -= RunOnSleep;
     }
 
     private void RunOnSleep()
@@ -67,29 +79,40 @@ public class Crop : MonoBehaviour
     [ContextMenu("Grow")]
     public void Grow()
     {
+        if (ReadyForHarvest) return;
+        if (HasGrownToday) return;
         if (IsDead) return;
 
-        HasGrownToday = true;
-        currentStage++;
-        if (currentStage <= meshOfStages.Length)
-        {
-            Set(meshOfStages[currentStage]);
-        }
-
+        // Tracking
         NumGrownToday++;
-        if (NumGrownToday >= GrowGoalToday)
+        HasGrownToday = true;
+        if (NumGrownToday == GrowGoalToday)
         {
+            GameManager._Instance.TendedToAllCrops();
             GameManager._Instance.CheckToDoItem("TendCrops");
         }
+
+        Set(meshOfStages[++currentStage]);
     }
+
+    [ContextMenu("Harvest")]
+    public void Harvest()
+    {
+        if (!ReadyForHarvest) return;
+        if (HasGrownToday) return;
+        NumHarvested++;
+        tempAudioSource.PlayOneShot(onHarvest);
+        Destroy(gameObject);
+    }
+
 
     [ContextMenu("Die")]
     public void Die()
     {
         if (IsDead) return;
+        NumDead++;
         IsDead = true;
-        Set(deadState);
         rootTransform.localScale = deadScale;
-        GameManager._Instance.CropCount--;
+        Set(deadState);
     }
 }

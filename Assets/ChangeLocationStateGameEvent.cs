@@ -4,10 +4,10 @@ using UnityEngine;
 public class ChangeLocationStateGameEvent : GameEvent
 {
     [SerializeField] private PlayerLocationState changeTo;
-    [SerializeField] private bool playAudio;
+    [SerializeField] private PlayAudioGameEvent accompanyingAudio;
 
     protected override void Activate()
     {
-        GameManager._Instance.LoadLocationState(changeTo, playAudio);
+        GameManager._Instance.LoadLocationState(changeTo, accompanyingAudio);
     }
 }

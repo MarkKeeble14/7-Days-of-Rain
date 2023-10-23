@@ -73,6 +73,10 @@ AudioMixerController:
     name: AmbienceLowPassFreq
   - guid: a6c84bd604666764eb6dac016b6bcf4d
     name: ExternalSFXLowPassFreq
+  - guid: 5e3c2db4772c37a4a824b9bd39e999f7
+    name: MusicVol
+  - guid: 878cdc8bf6fbc8f479f623894fa388b6
+    name: SFXVol
   m_AudioMixerGroupViews:
   - guids:
     - 3cbe8cf46bde17f40901b14a1c7c5d5b

@@ -3,6 +3,18 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+[System.Serializable]
+public struct JournalEntry
+{
+    public string DayText { get; private set; }
+    public string Text { get; private set; }
+    public JournalEntry(string dayText, string text)
+    {
+        DayText = dayText;
+        Text = text;
+    }
+}
+
 public class Journal : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI dayText;
@@ -11,7 +23,8 @@ public class Journal : MonoBehaviour
     [SerializeField] private string defaultEntryText = "<Waiting for Typing...>";
     [SerializeField] private int maxNumChars;
     [SerializeField] private int minCharsToCheckOff = 10;
-
+    private bool journalWasActiveLastFrame;
+    private List<JournalEntry> journalEntries = new List<JournalEntry>();
     public bool IsJournalActive { get; set; }
 
     public void ResetJournalForDay(int day)
@@ -44,7 +57,33 @@ public class Journal : MonoBehaviour
             {
                 GameManager._Instance.CheckToDoItem("Journal");
             }
-
         }
+        else if (journalWasActiveLastFrame)
+        {
+            entryText.text = entryText.text.Substring(0, entryText.text.Length - 1);
+        }
+        journalWasActiveLastFrame = IsJournalActive;
+    }
+
+    public void SaveJournalEntry(int day)
+    {
+        if (entryText.text.Equals(defaultEntryText))
+        {
+            SaveJournalEntry(new JournalEntry(dayLeadIn + day.ToString(), "No Entry"));
+        }
+        else
+        {
+            SaveJournalEntry(new JournalEntry(dayLeadIn + day.ToString(), entryText.text));
+        }
+    }
+
+    private void SaveJournalEntry(JournalEntry entry)
+    {
+        journalEntries.Add(entry);
+    }
+
+    public List<JournalEntry> GetJournalEntries()
+    {
+        return journalEntries;
     }
 }

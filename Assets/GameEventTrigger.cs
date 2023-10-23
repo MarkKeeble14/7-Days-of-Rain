@@ -36,6 +36,12 @@ public abstract class GameEventTrigger : MonoBehaviour
         return PassesConditions(additionalTriggerConditions, true);
     }
 
+    [ContextMenu("Trigger")]
+    private void Trigger()
+    {
+        Trigger(true);
+    }
+
     public void Trigger(bool overrideChecks = false)
     {
         if (!overrideChecks)

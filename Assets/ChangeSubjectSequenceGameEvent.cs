@@ -7,6 +7,6 @@ public class ChangeSubjectSequenceGameEvent : GameEvent
 
     protected override void Activate()
     {
-        GameManager._Instance.StartCoroutine(GameManager._Instance.ActiveCamera.ShowNewSubjectSequence(data, delay));
+        GameManager._Instance.StartCoroutine(GameManager._Instance.CameraController.ShowNewSubjectSequence(data, delay));
     }
 }

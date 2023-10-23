@@ -5,9 +5,10 @@ using UnityEngine;
 public enum CameraFollowStyle
 {
     LOOKAT_WITH_OFFSET,
-    MATCH,
+    MATCH_WITH_OFFSET,
     NONE,
-    PURE_LOOKAT
+    PURE_LOOKAT,
+    LOOK_DEAD_ON
 }
 
 [System.Serializable]
@@ -18,9 +19,11 @@ public struct CameraFollowSubjectData
     public CameraFollowStyle FollowStyle;
     public float RotateSpeed;
     public Vector3 Offset;
-    public bool IsPlayer;
-    public bool ReleaseMovementLockOnTransitionEnd;
     public bool UseDefaultData;
+    public bool IsPlayer;
+    public bool IngameUIActive;
+    public bool UseTransition;
+    public bool ReleaseMovementLockOnTransitionEnd;
 }
 
 public class CameraFollowSubject : MonoBehaviour
@@ -29,7 +32,8 @@ public class CameraFollowSubject : MonoBehaviour
     public bool Active { get { return active; } set { active = value; } }
 
     [Header("Init Data")]
-    [SerializeField] private CameraFollowSubjectData subjectData;
+    [SerializeField] private CameraFollowSubjectData playerFollow;
+    [SerializeField] private CameraFollowSubjectData initData;
     private CameraFollowSubjectData currentSubjectData;
     private Transform subject;
     private float followSpeed;
@@ -49,6 +53,7 @@ public class CameraFollowSubject : MonoBehaviour
     private float headBobTimer;
     private float lastHeadBobSinValue;
     private bool canPlayFootstep;
+    public bool PlayerIsSubject => subject == playerFollow.Subject;
 
     [Header("References")]
     [SerializeField] private PlayerInput p_Input;
@@ -57,12 +62,8 @@ public class CameraFollowSubject : MonoBehaviour
     [Header("Transition Settings")]
     [SerializeField] private float transitionPosGrace = 1;
     [SerializeField] private float transitionRotGrace = 1;
-    [SerializeField] private float defaultTransitionPosSpeed;
-    [SerializeField] private float defaultTransitionRotSpeed;
-    [SerializeField] private bool defaultUseTransition;
-    private float transitionRotSpeed;
     private float transitionPosSpeed;
-    private bool useTransition;
+    private float transitionRotSpeed;
     public bool Transitioning { get; private set; }
 
     [Header("Looking")]
@@ -72,21 +73,17 @@ public class CameraFollowSubject : MonoBehaviour
     [SerializeField] private float playerLookReleaseSpeed;
     private float playerVertLookMod;
     private float playerHorizontalLookMod;
-    private int subjectDataBuffer = 1;
 
-    private void Awake()
+    private void Start()
     {
-        transitionPosSpeed = defaultTransitionPosSpeed;
-        transitionRotSpeed = defaultTransitionRotSpeed;
-        useTransition = defaultUseTransition;
-        SetNewSubject(subjectData);
+        SetNewSubject(initData);
     }
 
     public void SetNewSubject(CameraFollowSubjectData data)
     {
         if (data.UseDefaultData)
         {
-            currentSubjectData = subjectData;
+            currentSubjectData = playerFollow;
         }
         else
         {
@@ -97,13 +94,12 @@ public class CameraFollowSubject : MonoBehaviour
 
     public void SetDefaultSubject()
     {
-        currentSubjectData = subjectData;
+        currentSubjectData = playerFollow;
         NewSubjectSet();
     }
 
-    public void SetTransitionSettings(bool useTransition, float posChangeRate, float rotChangeRate)
+    public void SetTransitionSettings(float posChangeRate, float rotChangeRate)
     {
-        this.useTransition = useTransition;
         transitionPosSpeed = posChangeRate;
         transitionRotSpeed = rotChangeRate;
     }
@@ -116,19 +112,22 @@ public class CameraFollowSubject : MonoBehaviour
         rotateSpeed = currentSubjectData.RotateSpeed;
         offset = currentSubjectData.Offset;
         enableCameraBob = currentSubjectData.IsPlayer;
+        GameManager._Instance.InGameUIActive = currentSubjectData.IngameUIActive;
+        CinematicBars._Instance.Active = !PlayerIsSubject;
 
-        // set target pos here first so wait for transitions doesn't judge immedietely
+        // set target pos here first so wait for transitions doesn't clear immedietely
         SetTargetPos();
 
-        if (useTransition)
+        if (currentSubjectData.UseTransition)
         {
+            ShowGameEventTriggerOpporotunity._Instance.Clear();
             p_Input.LockInput = true;
             Transitioning = true;
             GameManager._Instance.StartCoroutine(WaitForTransition(currentSubjectData.ReleaseMovementLockOnTransitionEnd));
         }
         else
         {
-            transform.position = targetPos;
+            SetToTargetPos();
         }
     }
 
@@ -137,8 +136,10 @@ public class CameraFollowSubject : MonoBehaviour
         while (true)
         {
             if (Vector3.Distance(transform.position, targetPos) < transitionPosGrace
-                && Vector3.Distance(transform.rotation.eulerAngles, targetRot.eulerAngles) < transitionRotGrace)
+                && Vector3.Distance(transform.eulerAngles, targetRot.eulerAngles) < transitionRotGrace)
             {
+                transform.position = targetPos;
+                transform.eulerAngles = targetRot.eulerAngles;
                 break;
             }
             yield return null;
@@ -158,13 +159,22 @@ public class CameraFollowSubject : MonoBehaviour
 
     private void SetTargetPos()
     {
-        if (followStyle == CameraFollowStyle.PURE_LOOKAT)
+        switch (followStyle)
         {
-            targetPos = transform.position;
-        }
-        else
-        {
-            targetPos = subject.transform.position + offset;
+            case CameraFollowStyle.LOOKAT_WITH_OFFSET:
+                targetPos = subject.transform.position + offset;
+                break;
+            case CameraFollowStyle.MATCH_WITH_OFFSET:
+                targetPos = subject.transform.position + offset;
+                break;
+            case CameraFollowStyle.NONE:
+                targetPos = transform.position;
+                break;
+            case CameraFollowStyle.PURE_LOOKAT:
+                targetPos = transform.position;
+                break;
+            default:
+                break;
         }
     }
 
@@ -201,7 +211,15 @@ public class CameraFollowSubject : MonoBehaviour
         }
 
         // Adjust Pos
-        float changePosRate = (!Transitioning ? followSpeed : transitionPosSpeed);
+        float changePosRate;
+        if (Transitioning)
+        {
+            changePosRate = transitionPosSpeed;
+        }
+        else
+        {
+            changePosRate = followSpeed;
+        }
         transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * changePosRate);
 
         switch (followStyle)
@@ -212,7 +230,7 @@ public class CameraFollowSubject : MonoBehaviour
             case CameraFollowStyle.PURE_LOOKAT:
                 targetRot = Quaternion.LookRotation(subject.transform.position - transform.position);
                 break;
-            case CameraFollowStyle.MATCH:
+            case CameraFollowStyle.MATCH_WITH_OFFSET:
                 targetRot = subject.transform.rotation;
                 break;
             default:
@@ -223,27 +241,29 @@ public class CameraFollowSubject : MonoBehaviour
         // Looking
         // Determine Look Mod Changes
         // Vertical Looking
-        if (p_Input.LookUp && playerVertLookMod > verticalLookBounds.x)
+        if (!Transitioning)
         {
-            playerVertLookMod = Mathf.Lerp(playerVertLookMod, verticalLookBounds.x, Time.deltaTime * playerLookSpeed);
-        }
-        if (p_Input.LookDown && playerVertLookMod < verticalLookBounds.y)
-        {
-            playerVertLookMod = Mathf.Lerp(playerVertLookMod, verticalLookBounds.y, Time.deltaTime * playerLookSpeed);
-        }
-        if (GameManager._Instance.LockMovement)
-        {
-            // Horizontal Looking
-            if (p_Input.TurnLeft && playerHorizontalLookMod > horizontalLookBounds.x)
+            if (p_Input.LookUp && playerVertLookMod > verticalLookBounds.x)
             {
-                playerHorizontalLookMod = Mathf.Lerp(playerHorizontalLookMod, horizontalLookBounds.x, Time.deltaTime * playerLookSpeed);
+                playerVertLookMod = Mathf.Lerp(playerVertLookMod, verticalLookBounds.x, Time.deltaTime * playerLookSpeed);
             }
-            if (p_Input.TurnRight && playerVertLookMod < horizontalLookBounds.y)
+            if (p_Input.LookDown && playerVertLookMod < verticalLookBounds.y)
             {
-                playerHorizontalLookMod = Mathf.Lerp(playerHorizontalLookMod, horizontalLookBounds.y, Time.deltaTime * playerLookSpeed);
+                playerVertLookMod = Mathf.Lerp(playerVertLookMod, verticalLookBounds.y, Time.deltaTime * playerLookSpeed);
+            }
+            if (GameManager._Instance.LockMovement)
+            {
+                // Horizontal Looking
+                if (p_Input.TurnLeft && playerHorizontalLookMod > horizontalLookBounds.x)
+                {
+                    playerHorizontalLookMod = Mathf.Lerp(playerHorizontalLookMod, horizontalLookBounds.x, Time.deltaTime * playerLookSpeed);
+                }
+                if (p_Input.TurnRight && playerVertLookMod < horizontalLookBounds.y)
+                {
+                    playerHorizontalLookMod = Mathf.Lerp(playerHorizontalLookMod, horizontalLookBounds.y, Time.deltaTime * playerLookSpeed);
+                }
             }
         }
-
         // Released
         if (!p_Input.LookUp && !p_Input.LookDown)
         {

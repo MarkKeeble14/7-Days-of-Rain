@@ -1,11 +1,12 @@
 ﻿using System.Collections;
 using UnityEngine;
 
+
 public class SleepTransitionAnimation : TransitionAnimation
 {
     [Header("Sleep Sequences")]
-    [SerializeField] private RectTransform topBlackBar;
-    [SerializeField] private RectTransform bottomBlackBar;
+    [SerializeField] private RectTransform topLid;
+    [SerializeField] private RectTransform bottomLid;
     [SerializeField] private Vector3 topGoalPos;
     [SerializeField] private Vector3 topRestPos;
     [SerializeField] private Vector3 botGoalPos;
@@ -30,32 +31,41 @@ public class SleepTransitionAnimation : TransitionAnimation
 
     private IEnumerator Close(float speed)
     {
-        while (topBlackBar.anchoredPosition.y != topGoalPos.y)
+        while (topLid.anchoredPosition.y != topGoalPos.y)
         {
-            topBlackBar.anchoredPosition = Vector3.MoveTowards(topBlackBar.anchoredPosition, topGoalPos, Time.deltaTime * speed);
-            bottomBlackBar.anchoredPosition = Vector3.MoveTowards(bottomBlackBar.anchoredPosition, botGoalPos, Time.deltaTime * speed);
+            topLid.anchoredPosition = Vector3.MoveTowards(topLid.anchoredPosition, topGoalPos, Time.deltaTime * speed);
+            bottomLid.anchoredPosition = Vector3.MoveTowards(bottomLid.anchoredPosition, botGoalPos, Time.deltaTime * speed);
             yield return null;
         }
     }
 
     private IEnumerator Open(float speed)
     {
-        while (topBlackBar.anchoredPosition.y != topRestPos.y)
+        while (topLid.anchoredPosition.y != topRestPos.y)
         {
-            topBlackBar.anchoredPosition = Vector3.MoveTowards(topBlackBar.anchoredPosition, topRestPos, Time.deltaTime * speed);
-            bottomBlackBar.anchoredPosition = Vector3.MoveTowards(bottomBlackBar.anchoredPosition, botRestPos, Time.deltaTime * speed);
+            topLid.anchoredPosition = Vector3.MoveTowards(topLid.anchoredPosition, topRestPos, Time.deltaTime * speed);
+            bottomLid.anchoredPosition = Vector3.MoveTowards(bottomLid.anchoredPosition, botRestPos, Time.deltaTime * speed);
             yield return null;
         }
     }
 
-    public override IEnumerator Out()
+    public override void SetToOutState()
+    {
+        topLid.anchoredPosition = topGoalPos;
+        bottomLid.anchoredPosition = botGoalPos;
+    }
+
+    public override void SetToInState()
+    {
+        topLid.anchoredPosition = topRestPos;
+        bottomLid.anchoredPosition = botRestPos;
+    }
+
+    protected override IEnumerator Out()
     {
         ShowGameEventTriggerOpporotunity._Instance.Clear();
 
-        yield return new WaitUntil(() => !GameManager._Instance.ActiveCamera.Transitioning);
-
-        topBlackBar.gameObject.SetActive(true);
-        bottomBlackBar.gameObject.SetActive(true);
+        yield return new WaitUntil(() => !GameManager._Instance.CameraController.Transitioning);
 
         // Blink Twice
         for (int i = 0; i < numBlinks; i++)
@@ -69,17 +79,26 @@ public class SleepTransitionAnimation : TransitionAnimation
         yield return StartCoroutine(Close(sleepEyesSpeed));
     }
 
-    public override IEnumerator In()
+    protected override IEnumerator In()
     {
         // Open Eyes
         yield return StartCoroutine(Open(wakeUpEyesSpeed));
 
-        GameManager._Instance.ActiveCamera.SetTransitionSettings(true, wakeUpPosChangeRate, wakeUpRotChangeRate);
-        GameManager._Instance.ActiveCamera.SetDefaultSubject();
+        GameManager._Instance.CameraController.SetTransitionSettings(wakeUpPosChangeRate, wakeUpRotChangeRate);
+        GameManager._Instance.CameraController.SetDefaultSubject();
 
-        yield return new WaitUntil(() => !GameManager._Instance.ActiveCamera.Transitioning);
+        yield return new WaitUntil(() => !GameManager._Instance.CameraController.Transitioning);
+    }
 
-        topBlackBar.gameObject.SetActive(false);
-        bottomBlackBar.gameObject.SetActive(false);
+    public override void Enable()
+    {
+        topLid.gameObject.SetActive(true);
+        bottomLid.gameObject.SetActive(true);
+    }
+
+    public override void Disable()
+    {
+        topLid.gameObject.SetActive(false);
+        bottomLid.gameObject.SetActive(false);
     }
 }

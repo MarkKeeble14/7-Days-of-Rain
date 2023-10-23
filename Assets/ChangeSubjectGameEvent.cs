@@ -6,6 +6,6 @@ public class ChangeSubjectGameEvent : GameEvent
 
     protected override void Activate()
     {
-        GameManager._Instance.ActiveCamera.SetNewSubject(data);
+        GameManager._Instance.CameraController.SetNewSubject(data);
     }
 }

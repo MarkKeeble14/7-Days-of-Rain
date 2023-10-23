@@ -99,15 +99,28 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   active: 1
-  subjectData:
+  playerFollow:
     Subject: {fileID: 0}
-    FollowSpeed: 22.5
+    FollowSpeed: 25
     FollowStyle: 1
     RotateSpeed: 90
     Offset: {x: 0, y: 1.5, z: 0}
-    IsPlayer: 1
-    ReleaseMovementLockOnTransitionEnd: 1
     UseDefaultData: 0
+    IsPlayer: 1
+    IngameUIActive: 1
+    UseTransition: 1
+    ReleaseMovementLockOnTransitionEnd: 1
+  initData:
+    Subject: {fileID: 0}
+    FollowSpeed: 10
+    FollowStyle: 0
+    RotateSpeed: 10
+    Offset: {x: 0, y: -4, z: 0}
+    UseDefaultData: 0
+    IsPlayer: 0
+    IngameUIActive: 0
+    UseTransition: 0
+    ReleaseMovementLockOnTransitionEnd: 0
   enableCameraBob: 1
   headBobStrength: 0.05
   headBobSpeed: 10
@@ -117,9 +130,6 @@ MonoBehaviour:
   p_Footsteps: {fileID: 0}
   transitionPosGrace: 1
   transitionRotGrace: 1
-  defaultTransitionPosSpeed: 10
-  defaultTransitionRotSpeed: 10
-  defaultUseTransition: 0
   playerLookSpeed: 2.5
   verticalLookBounds: {x: -45, y: 45}
   horizontalLookBounds: {x: -45, y: 45}

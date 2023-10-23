@@ -44,7 +44,7 @@ public class Calendar : MonoBehaviour
         }
 
         CrossoutUpTo(DayNightManager._Instance.StartDay - 1);
-        MarkHeartOnDay(DayNightManager._Instance.EndDay);
+        // MarkHeartOnDay(DayNightManager._Instance.EndDay);
     }
 
     public void CrossoutDay(int i)

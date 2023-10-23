@@ -252,7 +252,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   delayOnActivation: 0
-  useTransition: 1
   posChangeRate: 2.5
   rotChangeRate: 2.5
 --- !u!114 &230072355330266468
@@ -295,9 +294,11 @@ MonoBehaviour:
     FollowStyle: 0
     RotateSpeed: 25
     Offset: {x: 0, y: 0, z: 5}
-    IsPlayer: 0
-    ReleaseMovementLockOnTransitionEnd: 0
     UseDefaultData: 1
+    IsPlayer: 0
+    IngameUIActive: 0
+    UseTransition: 0
+    ReleaseMovementLockOnTransitionEnd: 0
 --- !u!114 &230072355330266471
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -317,12 +318,14 @@ MonoBehaviour:
   - {fileID: 230072355330266397}
   - {fileID: 230072355330266396}
   - {fileID: 1184593022108141862}
+  additionalShowConditions: []
   additionalTriggerConditions: []
   destroyOnTrigger: 0
   activationEffectString: Get Up
   playerLayer:
     serializedVersion: 2
     m_Bits: 128
+  shouldDisableOpporotunityOnTrigger: 1
 --- !u!114 &8951190165038856838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -544,12 +547,14 @@ MonoBehaviour:
   - {fileID: 230072355406775708}
   - {fileID: 230072355406775711}
   - {fileID: 8951190165038856838}
+  additionalShowConditions: []
   additionalTriggerConditions: []
   destroyOnTrigger: 0
   activationEffectString: Sit
   playerLayer:
     serializedVersion: 2
     m_Bits: 128
+  shouldDisableOpporotunityOnTrigger: 1
 --- !u!114 &230072355406775708
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -584,7 +589,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   delayOnActivation: 0
-  useTransition: 1
   posChangeRate: 2.5
   rotChangeRate: 2.5
 --- !u!114 &230072355406775711
@@ -620,9 +624,11 @@ MonoBehaviour:
     FollowStyle: 0
     RotateSpeed: 10
     Offset: {x: 0, y: 0.25, z: 5}
-    IsPlayer: 0
-    ReleaseMovementLockOnTransitionEnd: 0
     UseDefaultData: 0
+    IsPlayer: 0
+    IngameUIActive: 1
+    UseTransition: 1
+    ReleaseMovementLockOnTransitionEnd: 0
 --- !u!114 &1184593022108141862
 MonoBehaviour:
   m_ObjectHideFlags: 0

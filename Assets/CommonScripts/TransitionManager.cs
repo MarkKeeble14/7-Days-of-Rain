@@ -4,6 +4,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+public enum TransitionDirection
+{
+    IN,
+    OUT
+}
+
 public class TransitionManager : MonoBehaviour
 {
     public static TransitionManager _Instance { get; private set; }
@@ -16,7 +22,10 @@ public class TransitionManager : MonoBehaviour
 
     [SerializeField] private CanvasGroup cv;
 
-    public bool Transitioning { get; private set; }
+    public TransitionDirection LastPlayedTransitionDirection { get; private set; }
+
+    public bool Transitioning
+    { get; private set; }
 
     private void Awake()
     {
@@ -32,6 +41,18 @@ public class TransitionManager : MonoBehaviour
         if (playOnStart.Length > 0)
         {
             StartCoroutine(Transition(PlayIn(playOnStart, delayOnStartTransitionBy)));
+        }
+    }
+
+    public void SetAnimationToState(string key, TransitionDirection dir)
+    {
+        if (dir == TransitionDirection.IN)
+        {
+            animationMap[key].SetToInState();
+        }
+        else
+        {
+            animationMap[key].SetToOutState();
         }
     }
 
@@ -58,19 +79,25 @@ public class TransitionManager : MonoBehaviour
         onStart?.Invoke();
         if (animationMap.ContainsKey(key))
         {
-            yield return StartCoroutine(animationMap[key].In());
+            yield return StartCoroutine(animationMap[key].CallIn());
         }
         onEnd?.Invoke();
+
+        LastPlayedTransitionDirection = TransitionDirection.IN;
     }
 
     private IEnumerator PlayOut(string key, float delay, Action onStart = null, Action onEnd = null)
     {
+        yield return new WaitForSeconds(delay);
+
         onStart?.Invoke();
         if (animationMap.ContainsKey(key))
         {
-            yield return StartCoroutine(animationMap[key].Out());
+            yield return StartCoroutine(animationMap[key].CallOut());
         }
         onEnd?.Invoke();
+
+        LastPlayedTransitionDirection = TransitionDirection.OUT;
     }
 
     public IEnumerator PlayAnimationWithActionsInBetween(List<AnimationActionSequenceEntry> animationSequenceData)

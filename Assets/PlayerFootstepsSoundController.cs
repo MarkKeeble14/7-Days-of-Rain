@@ -9,6 +9,8 @@ public class PlayerFootstepsSoundController : MonoBehaviour
     private AudioClip lastPlayedClip;
     private AudioClip[] clips;
 
+    [SerializeField] private AudioClip[] fallbackClips;
+
 
     private void Update()
     {
@@ -21,6 +23,10 @@ public class PlayerFootstepsSoundController : MonoBehaviour
             {
                 clips = surfaceFootStepsMap[layer];
             }
+        }
+        else
+        {
+            clips = fallbackClips;
         }
     }
 

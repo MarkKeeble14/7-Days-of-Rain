@@ -6,6 +6,7 @@ public class WorldGenerator : MonoBehaviour
     [SerializeField] private GroundGenerator groundGenerator;
     [SerializeField] private PopulateWithFoliage populateWithFoliage;
     [SerializeField] private CropSpawner[] spawnCropsOnGenerate;
+    [SerializeField] private SpawnAnimals[] spawnAnimalsOnGenerate;
 
     private void Awake()
     {
@@ -21,6 +22,11 @@ public class WorldGenerator : MonoBehaviour
         foreach (CropSpawner cropSpawner in spawnCropsOnGenerate)
         {
             cropSpawner.Generate();
+        }
+
+        foreach (SpawnAnimals animalSpawner in spawnAnimalsOnGenerate)
+        {
+            animalSpawner.Spawn();
         }
 
         yield return new WaitForSeconds(0.05f);

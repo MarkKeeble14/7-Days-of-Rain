@@ -42,11 +42,24 @@ public class DayNightManager : MonoBehaviour
 
     [SerializeField] private ToDoList toDoList;
 
+    private bool overridingLightingPreset;
+    private LightingPreset overridenLightingPreset;
+
+    public void OverrideLightingPreset(LightingPreset preset)
+    {
+        overridenLightingPreset = preset;
+        overridingLightingPreset = true;
+    }
+
+    public void StopOverrideLightingPreset()
+    {
+        overridingLightingPreset = false;
+    }
+
     public void ResetHasCrossedOutToday()
     {
         HasCrossedOutToday = false;
     }
-
 
     private void Awake()
     {
@@ -61,7 +74,7 @@ public class DayNightManager : MonoBehaviour
         EnableTimeFlow = true;
 
         TimeOfDay = (timeOfDayTimer % maxTimeOfDay) / maxTimeOfDay;
-        UpdateLighting(TimeOfDay);
+        UpdateLighting(preset, TimeOfDay);
     }
 
     public void CrossoutCurrentDay()
@@ -109,8 +122,15 @@ public class DayNightManager : MonoBehaviour
 
     private void SetClockText()
     {
+        clockText.text = GetStringDuration(timeOfDayTimer);
+        timeOfDayText.text = CurrentTimeOfDayLabel.ToString()
+            + "\n" + nextTimeOfDayLabel + " in " + GetStringDuration(nextTimeOfDayBreakpoint - timeOfDayTimer);
+    }
+
+    private string GetStringDuration(float t)
+    {
         // Get Integer part of timer
-        int fp = Mathf.FloorToInt(timeOfDayTimer);
+        int fp = Mathf.FloorToInt(t);
         int adjustedFp = fp;
         if (adjustedFp > 24)
         {
@@ -121,14 +141,13 @@ public class DayNightManager : MonoBehaviour
             fpStr = "0" + fpStr;
 
         // from decimal part of timer, convert to 60 rep
-        float spd = (timeOfDayTimer - fp) * 60;
+        float spd = (t - fp) * 60;
         int sp = Mathf.RoundToInt(spd);
         string spStr = sp.ToString();
         if (spStr.Length == 1)
             spStr = "0" + spStr;
 
-        clockText.text = fpStr + ":" + spStr;
-        timeOfDayText.text = CurrentTimeOfDayLabel.ToString();
+        return fpStr + ":" + spStr;
     }
 
     private void Update()
@@ -161,14 +180,22 @@ public class DayNightManager : MonoBehaviour
                 }
             }
 
-            if (CurrentTimeOfDayLabel == TimeOfDayLabel.MIDNIGHT && timeOfDayTimer >= forceSleepAtTODTimerValue && canForceSleep)
+            if (CurrentTimeOfDayLabel == TimeOfDayLabel.MIDNIGHT && timeOfDayTimer >= forceSleepAtTODTimerValue && canForceSleep
+                && GameManager._Instance.CurrentLocationState != PlayerLocationState.IN_BED)
             {
                 canForceSleep = false;
                 EnableTimeFlow = false;
                 StartCoroutine(GameManager._Instance.ForceSleepSequence());
             }
         }
-        UpdateLighting(TimeOfDay);
+        if (overridingLightingPreset)
+        {
+            UpdateLighting(overridenLightingPreset, TimeOfDay);
+        }
+        else
+        {
+            UpdateLighting(preset, TimeOfDay);
+        }
     }
 
     private void EnableNightLights()
@@ -191,7 +218,7 @@ public class DayNightManager : MonoBehaviour
         }
     }
 
-    private void UpdateLighting(float timePercent)
+    private void UpdateLighting(LightingPreset preset, float timePercent)
     {
         RenderSettings.ambientLight = preset.AmbientColor.Evaluate(timePercent);
         RenderSettings.fogColor = preset.FogColor.Evaluate(timePercent);

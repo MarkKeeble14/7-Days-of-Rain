@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 4590259641685186885}
   - component: {fileID: 4590259641685186884}
   - component: {fileID: 4590259641685186883}
+  - component: {fileID: 1938337149675253214}
   m_Layer: 0
   m_Name: MealTrigger
   m_TagString: Untagged
@@ -230,6 +231,7 @@ MonoBehaviour:
   - {fileID: 4590259641685186940}
   - {fileID: 4590259641685186885}
   - {fileID: 4590259641685186884}
+  - {fileID: 1938337149675253214}
   additionalShowConditions:
   - {fileID: 4590259641685186883}
   - {fileID: 4590259641685186887}
@@ -324,3 +326,17 @@ MonoBehaviour:
   desiredState: 1
   key: Breakfast
   toDoList: {fileID: 0}
+--- !u!114 &1938337149675253214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4086351589555273988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6695f8851c893714991e9bfbf98d90fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  delayOnActivation: 0
+  alterBy: -25

@@ -13,11 +13,16 @@ public class FadeAudioSource : MonoBehaviour
     {
         if (fadeInOnStart)
         {
-            CallFade(source, volTarget);
+            CallFade(volTarget);
         }
     }
 
-    public void CallFade(AudioSource source, float volTarget)
+    public void SetVolume(float v)
+    {
+        source.volume = v;
+    }
+
+    public void CallFade(float volTarget)
     {
         StartCoroutine(ExecuteFade(source, volTarget));
     }

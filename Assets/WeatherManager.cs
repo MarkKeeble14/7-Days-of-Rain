@@ -41,6 +41,14 @@ public class WeatherManager : MonoBehaviour
     [SerializeField] private FlashOfLight flashOfLightPrefab;
     private Coroutine spawnFlashesCoroutine;
 
+    [Header("Shown by Flash Spooker")]
+    [SerializeField] private Transform shownByFlashSpooker;
+    [SerializeField] private Vector2 minMaxDistanceFromPlayer;
+    [SerializeField] private Vector2 chanceToShowSpookerWithFlash;
+    [SerializeField] private Transform player;
+    [SerializeField] private Vector2 shownByFlashSpookerDuration;
+    [SerializeField] private Vector2 shownByFlashSpookerDelay;
+
     private void Awake()
     {
         _Instance = this;
@@ -70,6 +78,20 @@ public class WeatherManager : MonoBehaviour
         {
             chanceToRecurse.x -= reduceChanceToRecursePerRecurse;
             SpawnFlash(chanceToRecurse, timeToActivate + RandomHelper.RandomFloat(minMaxTimeBetweenRecursingActivations));
+        }
+        else
+        {
+            if (RandomHelper.EvaluateChanceTo(chanceToShowSpookerWithFlash) && DayNightManager._Instance.CurrentTimeOfDayLabel >= TimeOfDayLabel.EVENING)
+            {
+                StartCoroutine(Utils.CallActionAfterDelay(delegate
+                {
+                    Vector3 placePos = player.position + player.forward.normalized * RandomHelper.RandomFloat(minMaxDistanceFromPlayer);
+                    shownByFlashSpooker.position = placePos;
+                    shownByFlashSpooker.rotation = Quaternion.LookRotation(placePos - player.position);
+                    shownByFlashSpooker.gameObject.SetActive(true);
+                    StartCoroutine(Utils.CallActionAfterDelay(() => shownByFlashSpooker.gameObject.SetActive(false), RandomHelper.RandomFloat(shownByFlashSpookerDuration)));
+                }, RandomHelper.RandomFloat(shownByFlashSpookerDelay)));
+            }
         }
     }
 

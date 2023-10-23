@@ -2,6 +2,6 @@
 {
     protected override void Activate()
     {
-        GameManager._Instance.Slept();
+        GameManager._Instance.StartCoroutine(GameManager._Instance.Sleep());
     }
 }
