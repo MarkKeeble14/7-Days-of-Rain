@@ -16,10 +16,10 @@ public class MonsterMovement : MonoBehaviour
     private MonsterState state;
 
     [SerializeField] private Animator anim;
-    [SerializeField] private Vector2 minMaxDelayBeforeNextWander;
     [SerializeField] private Vector2 minMaxSpawnDistFromTarget;
     [SerializeField] private Vector2 minMaxRandomizeOffset;
     [SerializeField] private float minChargeDistToKill = 2.5f;
+    [SerializeField] private LayerMask floorLayers;
 
     private void Start()
     {
@@ -54,8 +54,16 @@ public class MonsterMovement : MonoBehaviour
 
         while (state == MonsterState.CHARGE)
         {
-            transform.position = Vector3.MoveTowards(transform.position, target.position, Time.deltaTime * chargeSpeed);
+            Vector3 newPos = Vector3.MoveTowards(transform.position, target.position, Time.deltaTime * chargeSpeed);
+            RaycastHit hit;
+            Physics.Raycast(transform.position, Vector3.down, out hit, Mathf.Infinity, floorLayers);
+            if (hit.transform != null)
+            {
+                newPos.y = hit.point.y;
+            }
+            transform.position = newPos;
             transform.rotation = Quaternion.LookRotation(target.position - transform.position);
+
 
             if (Vector3.Distance(transform.position, target.position) < minChargeDistToKill)
             {

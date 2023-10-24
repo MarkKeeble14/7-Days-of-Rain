@@ -299,7 +299,7 @@ MonoBehaviour:
     - {fileID: 8300000, guid: dd97e893730e77b4e8e57f1831e0effe, type: 3}
     - {fileID: 8300000, guid: b787adf68dde9e948a21fc5320b669ee, type: 3}
     - {fileID: 8300000, guid: aa5a99126ac9a3b40b91826a55bf3a03, type: 3}
-  minMaxTimeBetweenSounds: {x: 3, y: 15}
+  minMaxTimeBetweenSounds: {x: 7, y: 15}
   chanceToEmit: {x: 2, y: 5}
 --- !u!82 &3141451228068230599
 AudioSource:

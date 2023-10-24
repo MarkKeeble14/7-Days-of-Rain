@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,7 +9,33 @@ public enum WeatherType
     SUNNY,
     WINDY,
     RAINY,
-    STORMY
+    STORMY,
+    APOCALYPTIC
+}
+
+[System.Serializable]
+public struct LightningFlashData
+{
+    public bool Enable;
+    public Vector2 MinMaxTimeBetweenFlashes;
+    public Vector2 MinMaxAllowedSpawningPosX;
+    public Vector2 MinMaxAllowedSpawningPosY;
+    public Vector2 MinMaxAllowedSpawningPosZ;
+}
+
+[System.Serializable]
+public struct SpookerFlashData
+{
+    public bool Enable;
+    public Vector2 MinMaxDistanceFromPlayer;
+    public Vector2 ChanceToShowSpookerWithFlash;
+    public Vector2 MinMaxShownByFlashSpookerFadeSpeed;
+    public Vector2 MinMaxShownByFlashSpookerDelayBetween;
+    public Vector2 MinMaxTransparencyGoal;
+    public Vector2 ShownByFlashSpookerDelay;
+    public Vector2 MinMaxAllowedSpawningPosX;
+    public Vector2 MinMaxAllowedSpawningPosZ;
+    public TimeOfDayLabel BeginAt;
 }
 
 [System.Serializable]
@@ -18,6 +45,9 @@ public struct WeatherTypeData
     public LightingPreset LightingPreset;
     public ContinuousAudioSource[] AmbientAudioSources;
     public ContinuousAudioSource[] InteriorExplicitAmbientAudioSources;
+    public float ColdModifier;
+    public LightningFlashData LightningFlashData;
+    public SpookerFlashData SpookerFlashData;
 }
 
 public class WeatherManager : MonoBehaviour
@@ -30,89 +60,120 @@ public class WeatherManager : MonoBehaviour
     public WeatherType CurrentWeatherType { get; private set; }
 
     [Header("Flashes")]
-    [SerializeField] private Vector2 minMaxTimeBetweenFlashes = new Vector2(15, 30);
-    [SerializeField] private Vector2 minMaxAllowedSpawningPosX = new Vector2(-100, 100);
-    [SerializeField] private Vector2 minMaxAllowedSpawningPosY = new Vector2(50, 100);
-    [SerializeField] private Vector2 minMaxAllowedSpawningPosZ = new Vector2(-100, 100);
-    [SerializeField] private Vector2 chanceToTriggerMultiple = new Vector2(1, 10);
-    [SerializeField] private Vector2 chanceToRecurse = new Vector2(10, 25);
-    [SerializeField] private Vector2 minMaxTimeBetweenRecursingActivations = new Vector2(.5f, 1.5f);
-    [SerializeField] private float reduceChanceToRecursePerRecurse = 2;
     [SerializeField] private FlashOfLight flashOfLightPrefab;
     private Coroutine spawnFlashesCoroutine;
+    private LightningFlashData currentLightningFlashData => weatherTypeData[CurrentWeatherType].LightningFlashData;
+    private SpookerFlashData currentSpookerFlashData => weatherTypeData[CurrentWeatherType].SpookerFlashData;
+    public float CurrentWeatherColdGainRateIncrease => weatherTypeData[CurrentWeatherType].ColdModifier;
 
     [Header("Shown by Flash Spooker")]
-    [SerializeField] private Transform shownByFlashSpooker;
-    [SerializeField] private Vector2 minMaxDistanceFromPlayer;
-    [SerializeField] private Vector2 chanceToShowSpookerWithFlash;
     [SerializeField] private Transform player;
-    [SerializeField] private Vector2 shownByFlashSpookerDuration;
-    [SerializeField] private Vector2 shownByFlashSpookerDelay;
+    [SerializeField] private Transform shownByFlashSpooker;
+    [SerializeField] private SkinnedMeshRenderer shownByFlashSpookerRenderer;
+    [SerializeField] private BindToLayer jumpscareSpookerBindToGround;
+    private Material jumpScareSpookerMat;
 
     private void Awake()
     {
         _Instance = this;
+
+        jumpScareSpookerMat = shownByFlashSpookerRenderer.sharedMaterial;
+        Color c = jumpScareSpookerMat.color;
+        c.a = 0;
+        jumpScareSpookerMat.color = c;
+    }
+
+    [ContextMenu("Fade Spooker")]
+    public void FadeSpooker()
+    {
+        StartCoroutine(FadeInThenOutMaterialTransparency(jumpScareSpookerMat,
+            RandomHelper.RandomFloat(currentSpookerFlashData.MinMaxTransparencyGoal),
+            RandomHelper.RandomFloat(currentSpookerFlashData.MinMaxShownByFlashSpookerFadeSpeed),
+            RandomHelper.RandomFloat(currentSpookerFlashData.MinMaxShownByFlashSpookerDelayBetween),
+            null));
+    }
+
+    private IEnumerator FadeInThenOutMaterialTransparency(Material mat, float transparencyGoal, float fadeSpeed, float delayBetween, Action onEnd)
+    {
+        Color startColor = mat.color;
+        Color targetColor = mat.color;
+        targetColor.a = transparencyGoal;
+        Color newColor;
+        while (mat.color.a < targetColor.a)
+        {
+            newColor = mat.color;
+            newColor.a += Time.deltaTime * fadeSpeed;
+            mat.color = newColor;
+            yield return null;
+        }
+        yield return new WaitForSeconds(delayBetween);
+        while (mat.color.a > 0)
+        {
+            newColor = mat.color;
+            newColor.a -= Time.deltaTime * fadeSpeed;
+            mat.color = newColor;
+            yield return null;
+        }
+        onEnd?.Invoke();
     }
 
     private IEnumerator SpawnFlashes()
     {
-        float timeBetweenFlashes = RandomHelper.RandomFloat(minMaxTimeBetweenFlashes);
+        float timeBetweenFlashes = RandomHelper.RandomFloat(currentLightningFlashData.MinMaxTimeBetweenFlashes);
         yield return new WaitForSeconds(timeBetweenFlashes);
-        SpawnFlash(chanceToRecurse, 0);
+        SpawnFlash();
         spawnFlashesCoroutine = StartCoroutine(SpawnFlashes());
     }
 
-    private void SpawnFlash(Vector2 chanceToRecurse, float timeToActivate)
+    private void SpawnFlash()
     {
-        if (chanceToRecurse.x <= 0) return;
-
         Vector3 spawnPos = new Vector3(
-            RandomHelper.RandomFloat(minMaxAllowedSpawningPosX),
-            RandomHelper.RandomFloat(minMaxAllowedSpawningPosY),
-            RandomHelper.RandomFloat(minMaxAllowedSpawningPosZ));
+            RandomHelper.RandomFloat(currentLightningFlashData.MinMaxAllowedSpawningPosX),
+            RandomHelper.RandomFloat(currentLightningFlashData.MinMaxAllowedSpawningPosY),
+            RandomHelper.RandomFloat(currentLightningFlashData.MinMaxAllowedSpawningPosZ));
         FlashOfLight light = Instantiate(flashOfLightPrefab, spawnPos, Quaternion.identity);
-        light.Activate(timeToActivate);
+        light.Activate(0);
 
-        if (RandomHelper.EvaluateChanceTo(chanceToTriggerMultiple)
-            && RandomHelper.EvaluateChanceTo(chanceToRecurse))
+        if (currentSpookerFlashData.Enable &&
+            RandomHelper.EvaluateChanceTo(currentSpookerFlashData.ChanceToShowSpookerWithFlash)
+            && DayNightManager._Instance.CurrentTimeOfDayLabel >= currentSpookerFlashData.BeginAt
+            && !GameManager._Instance.InMonsterSequence)
         {
-            chanceToRecurse.x -= reduceChanceToRecursePerRecurse;
-            SpawnFlash(chanceToRecurse, timeToActivate + RandomHelper.RandomFloat(minMaxTimeBetweenRecursingActivations));
-        }
-        else
-        {
-            if (RandomHelper.EvaluateChanceTo(chanceToShowSpookerWithFlash) && DayNightManager._Instance.CurrentTimeOfDayLabel >= TimeOfDayLabel.EVENING)
+            StartCoroutine(Utils.CallActionAfterDelay(delegate
             {
-                StartCoroutine(Utils.CallActionAfterDelay(delegate
-                {
-                    Vector3 placePos = player.position + player.forward.normalized * RandomHelper.RandomFloat(minMaxDistanceFromPlayer);
-                    shownByFlashSpooker.position = placePos;
-                    shownByFlashSpooker.rotation = Quaternion.LookRotation(placePos - player.position);
-                    shownByFlashSpooker.gameObject.SetActive(true);
-                    StartCoroutine(Utils.CallActionAfterDelay(() => shownByFlashSpooker.gameObject.SetActive(false), RandomHelper.RandomFloat(shownByFlashSpookerDuration)));
-                }, RandomHelper.RandomFloat(shownByFlashSpookerDelay)));
-            }
+                Vector3 placePos = player.position + player.forward.normalized * RandomHelper.RandomFloat(currentSpookerFlashData.MinMaxDistanceFromPlayer);
+                placePos.y = player.position.y;
+
+                placePos += new Vector3(
+                    RandomHelper.RandomFloat(currentSpookerFlashData.MinMaxAllowedSpawningPosX),
+                    0,
+                    RandomHelper.RandomFloat(currentSpookerFlashData.MinMaxAllowedSpawningPosZ));
+
+                shownByFlashSpooker.position = placePos;
+                shownByFlashSpooker.rotation = Quaternion.LookRotation(placePos - player.position);
+                jumpscareSpookerBindToGround.TryBind();
+                FadeSpooker();
+            }, RandomHelper.RandomFloat(currentSpookerFlashData.ShownByFlashSpookerDelay)));
         }
     }
 
     public void SetWeather(WeatherType type)
     {
-        // Spawn Flashes During Stormy Weather
-        if (type != WeatherType.STORMY && spawnFlashesCoroutine != null)
-        {
-            // New weather is anything other than stormy, stop the storming flashes
-            StopCoroutine(spawnFlashesCoroutine);
-        }
-        else if (CurrentWeatherType != WeatherType.STORMY && type == WeatherType.STORMY)
-        {
-            // New weather is Stormy and previous weather was not already stormy
-            // Ensures that we don't start multiple of the coroutines
-            spawnFlashesCoroutine = StartCoroutine(SpawnFlashes());
-        }
-
         CurrentWeatherType = type;
         WeatherTypeData data = weatherTypeData[type];
 
+        // Stop previous coroutine
+        if (spawnFlashesCoroutine != null)
+        {
+            StopCoroutine(spawnFlashesCoroutine);
+            spawnFlashesCoroutine = null;
+        }
+
+        // Start new
+        if (currentLightningFlashData.Enable)
+        {
+            spawnFlashesCoroutine = StartCoroutine(SpawnFlashes());
+        }
 
         // Ambience
         // Disable previous objects

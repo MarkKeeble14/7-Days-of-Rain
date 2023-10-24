@@ -298,6 +298,7 @@ MonoBehaviour:
     IsPlayer: 0
     IngameUIActive: 0
     UseTransition: 0
+    AllowLook: 0
     ReleaseMovementLockOnTransitionEnd: 0
 --- !u!114 &230072355330266471
 MonoBehaviour:
@@ -628,6 +629,7 @@ MonoBehaviour:
     IsPlayer: 0
     IngameUIActive: 1
     UseTransition: 1
+    AllowLook: 1
     ReleaseMovementLockOnTransitionEnd: 0
 --- !u!114 &1184593022108141862
 MonoBehaviour:

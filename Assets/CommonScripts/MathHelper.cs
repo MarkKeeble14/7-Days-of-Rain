@@ -53,4 +53,13 @@ public class MathHelper
             return ((Mathf.FloorToInt(v1 / v2)) * v2) + v2;
         }
     }
+
+    public static bool QuaternionsEqual(Quaternion q1, Quaternion q2)
+    {
+        return (q1.Equals(q2) || (q1 == q2));
+    }
+    public static bool QuaternionsApproximatelyEqual(Quaternion val, Quaternion about, float range)
+    {
+        return Quaternion.Dot(val, about) > 1f - range;
+    }
 }

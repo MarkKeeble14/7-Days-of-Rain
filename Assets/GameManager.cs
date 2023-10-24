@@ -95,6 +95,7 @@ public class GameManager : MonoBehaviour
         }
     }
     [SerializeField] private SerializableDictionary<TimeOfDayLabel, float> timeOfDayColdModifier = new SerializableDictionary<TimeOfDayLabel, float>();
+    [SerializeField] private TimeOfDayLabel nightTimeActiivitiesBeginAt = TimeOfDayLabel.NIGHT;
     private float currentPlayerCold;
     public float PercentColdValue => currentPlayerCold / maxColdValue;
     public bool BeingForcedInsideForBeingTooCold { get; private set; }
@@ -147,26 +148,38 @@ public class GameManager : MonoBehaviour
     public float CurrentDirtPercentage => CurrentDirtAmount / maxDirtCapacity;
     [SerializeField] private Image dirtAmount;
     [SerializeField] private GameObject dirtAmountContainer;
-    [SerializeField, Range(0, 100)] private float percentCropHarvestedDensityForGoodEnding = 90.0f;
+    [SerializeField, Range(0, 1)] private float percentCropHarvestedDensityForGoodEnding = 0.9f;
     public bool TendedToAllCropsToday { get; private set; }
     public float CurrentDirtAmount { get; private set; }
 
     [Header("Coyote")]
-    [SerializeField] private Vector2 chanceToInitiateCoyoteSequence;
+    [SerializeField] private SerializableDictionary<int, bool> enableCoyoteSoundsOnDays = new SerializableDictionary<int, bool>();
     [SerializeField] private SimpleAudioClipContainer coyoteSequenceBegunSound;
     [SerializeField] private RandomClipAudioClipContainer ambientCoyoteSounds;
+    [SerializeField] private Vector2 minMaxTimeTillNextCoyoteSequence;
     [SerializeField] private Vector2 minMaxTimeBetweenCoyoteAmbientSounds;
-    [SerializeField] private SerializableDictionary<int, bool> enableCoyoteSoundsOnDays = new SerializableDictionary<int, bool>();
-    [SerializeField] private TimeOfDayLabel coyotesBeginHowlingAtTimeOfDay = TimeOfDayLabel.NIGHT;
     [SerializeField] private float inCoyoteSequenceAmbientTimerMod = 3;
     [SerializeField] private Dialogue[] firstCoyoteDialogue;
-    private bool hasPlayedCoyoteDialogue;
-    private bool inCoyoteSequence;
     private float coyoteAmbientTimer;
+    private float nextCoyoteSequenceTimer;
+    private bool inCoyoteSequence;
+    private bool hasPlayedCoyoteDialogue;
+
+    [Header("Monster Chase")]
+    [SerializeField] private MonsterMovement monsterMovement;
+    [SerializeField] private SimpleAudioClipContainer monsterChaseOn;
+    [SerializeField] private int canInitiateMonsterChaseBeginningDayNo = 1;
+    [SerializeField] private Vector2 minMaxTimeTillNextMonsterSequence;
+    private float nextMonsterSequenceTimer;
+    private bool inMonsterSequence;
+    public bool InMonsterSequence => inMonsterSequence;
 
     [Header("Spooky Wind")]
     [SerializeField] private FadeAudioSource spookyWindSource;
     private bool spookyWindEnabled;
+
+    [Header("Heartbeats")]
+    [SerializeField] private ContinuousAudioSource heartBeats;
 
     [Header("Monster Massacre")]
     [SerializeField] private SimpleAudioClipContainer monsterMassacre;
@@ -179,14 +192,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private Vector2 minMaxTimeBetweenAnimalDeaths;
     [SerializeField] private GameObject chickenPenGate;
     [SerializeField] private GameObject cowPenGate;
-
-    [Header("Monster Chase")]
-    [SerializeField] private SimpleAudioClipContainer monsterChaseOn;
-    [SerializeField] private int canInitiateMonsterChaseBeginningDayNo = 1;
-    [SerializeField] private Vector2 chanceToInitiateMonsterSequence;
-    private bool inMonsterSequence;
-    [SerializeField] private MonsterMovement monsterMovement;
-    [SerializeField] private ContinuousAudioSource heartBeats;
 
     [Header("Enemy Murder")]
     [SerializeField] private Animator enemyAnim;
@@ -208,6 +213,7 @@ public class GameManager : MonoBehaviour
     {
         inCoyoteSequence = false;
         CanSprintDisplayController._Instance.CanSprint = false;
+        nextCoyoteSequenceTimer = RandomHelper.RandomFloat(minMaxTimeTillNextCoyoteSequence);
     }
 
     [ContextMenu("Begin Monster")]
@@ -225,6 +231,7 @@ public class GameManager : MonoBehaviour
         inMonsterSequence = false;
         monsterMovement.Sleep();
         CanSprintDisplayController._Instance.CanSprint = false;
+        nextMonsterSequenceTimer = RandomHelper.RandomFloat(minMaxTimeTillNextMonsterSequence);
     }
 
     public void AlterDirt(float alterBy)
@@ -262,10 +269,14 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         p_Input.LockInput = true;
+        LockMovement = true;
         SetDayData();
-
         LoadState(CurrentLocationState);
         ShowGameEventTriggerOpporotunity._Instance.Enable = false;
+        journal.ResetJournalForDay(CurrentDay + 1 + DayNightManager._Instance.StartDay);
+
+        EndCoyoteSequence();
+        EndMonsterSequence();
     }
 
     private void Update()
@@ -276,7 +287,7 @@ public class GameManager : MonoBehaviour
         heartBeats.Muted = !inMonsterSequence && !inCoyoteSequence && GameStarted;
 
         // Night time activities
-        if (DayNightManager._Instance.CurrentTimeOfDayLabel >= TimeOfDayLabel.NIGHT)
+        if (DayNightManager._Instance.CurrentTimeOfDayLabel >= nightTimeActiivitiesBeginAt)
         {
             // Spooky Wind
             if (!spookyWindEnabled)
@@ -285,41 +296,55 @@ public class GameManager : MonoBehaviour
                 spookyWindEnabled = true;
             }
 
-            // Monster
-            if (CurrentDay >= canInitiateMonsterChaseBeginningDayNo)
+            if (!BeingForcedInsideForBeingTooCold && !BeingForcedToSleep)
             {
-                if (!PlayerIsInside
-                    && !inMonsterSequence
-                    && RandomHelper.EvaluateChanceTo(chanceToInitiateMonsterSequence))
+                // Monster
+                if (CurrentDay >= canInitiateMonsterChaseBeginningDayNo)
                 {
-                    BeginMonsterSequence();
-                }
-            }
-
-            // Coyotes
-            if (enableCoyoteSoundsOnDays[CurrentDay])
-            {
-                coyoteAmbientTimer -= Time.deltaTime * (inCoyoteSequence ? inCoyoteSequenceAmbientTimerMod : 1);
-                if (coyoteAmbientTimer <= 0)
-                {
-                    ambientCoyoteSounds.PlayOneShot();
-                    coyoteAmbientTimer = RandomHelper.RandomFloat(minMaxTimeBetweenCoyoteAmbientSounds);
-
-                    if (!hasPlayedCoyoteDialogue)
+                    if (!PlayerIsInside && !inMonsterSequence)
                     {
-                        hasPlayedCoyoteDialogue = true;
-                        StartCoroutine(DialogueManager._Instance.ExecuteDialogue(firstCoyoteDialogue));
+                        if (nextMonsterSequenceTimer <= 0)
+                        {
+                            BeginMonsterSequence();
+                        }
+                        else
+                        {
+                            nextMonsterSequenceTimer -= Time.deltaTime;
+                        }
                     }
                 }
 
-                if (!PlayerIsInside
-                    && !inCoyoteSequence
-                    && RandomHelper.EvaluateChanceTo(chanceToInitiateCoyoteSequence))
+                // Coyotes
+                if (enableCoyoteSoundsOnDays[CurrentDay])
                 {
-                    BeginCoyoteSequence();
+                    // Audio
+                    coyoteAmbientTimer -= Time.deltaTime * (inCoyoteSequence ? inCoyoteSequenceAmbientTimerMod : 1);
+                    if (coyoteAmbientTimer <= 0)
+                    {
+                        ambientCoyoteSounds.PlayOneShot();
+                        coyoteAmbientTimer = RandomHelper.RandomFloat(minMaxTimeBetweenCoyoteAmbientSounds);
+
+                        if (!hasPlayedCoyoteDialogue)
+                        {
+                            hasPlayedCoyoteDialogue = true;
+                            StartCoroutine(DialogueManager._Instance.ExecuteDialogue(firstCoyoteDialogue));
+                        }
+                    }
+
+                    // Sequence
+                    if (!PlayerIsInside && !inCoyoteSequence)
+                    {
+                        if (nextCoyoteSequenceTimer <= 0)
+                        {
+                            BeginCoyoteSequence();
+                        }
+                        else
+                        {
+                            nextCoyoteSequenceTimer -= Time.deltaTime;
+                        }
+                    }
                 }
             }
-
         }
 
         // Fade in in game UI
@@ -333,7 +358,7 @@ public class GameManager : MonoBehaviour
 
         if (!PlayerIsInside && currentPlayerCold < maxColdValue)
         {
-            currentPlayerCold += Time.deltaTime * accumulateColdRate
+            currentPlayerCold += Time.deltaTime * (accumulateColdRate + WeatherManager._Instance.CurrentWeatherColdGainRateIncrease)
                 * (PlayerExposedToRain ? exposedToRainColdModifier : 1)
                 * timeOfDayColdModifier[DayNightManager._Instance.CurrentTimeOfDayLabel];
             if (currentPlayerCold > maxColdValue)
@@ -485,14 +510,19 @@ public class GameManager : MonoBehaviour
     }
 
 
+    public void SaveJournalEntry()
+    {
+        journal.SaveJournalEntry(CurrentDay + 1 + DayNightManager._Instance.StartDay);
+    }
+
     public IEnumerator Sleep()
     {
         EndCoyoteSequence();
         EndMonsterSequence();
 
         // Journal
-        journal.SaveJournalEntry(CurrentDay + DayNightManager._Instance.StartDay);
-        journal.ResetJournalForDay(CurrentDay + DayNightManager._Instance.StartDay);
+        SaveJournalEntry();
+        journal.ResetJournalForDay(CurrentDay + 1 + DayNightManager._Instance.StartDay);
 
         // Sleepy Time Events
         switch (CurrentDay)
@@ -564,23 +594,22 @@ public class GameManager : MonoBehaviour
         Crop.GrowGoalToday = Crop.NumSpawned;
     }
 
+    public void LastCropHarvested()
+    {
+        float result = (float)Crop.NumHarvested / Crop.NumSpawned;
+        if (result >= percentCropHarvestedDensityForGoodEnding)
+        {
+            GoodEnding();
+        }
+        else
+        {
+            BadEnding();
+        }
+    }
+
     public IEnumerator DayReport()
     {
         OnEndOfDay?.Invoke();
-
-        if (Crop.NumHarvested + Crop.NumDead == Crop.NumSpawned)
-        {
-            // End Game
-            if (Crop.NumHarvested / Crop.NumSpawned >= percentCropHarvestedDensityForGoodEnding)
-            {
-                GoodEnding();
-            }
-            else
-            {
-                BadEnding();
-            }
-            yield break;
-        }
 
         Crop.GrowGoalToday = (Crop.NumSpawned - Crop.NumHarvested - Crop.NumDead);
         dayReportText.text = "Crops Remaining: " + Crop.GrowGoalToday + " / " + Crop.NumSpawned
@@ -619,7 +648,6 @@ public class GameManager : MonoBehaviour
 
         yield return new WaitUntil(() => Input.GetKey(closeDayResultScreenKey));
 
-
         yield return StartCoroutine(Utils.ChangeCanvasGroupAlpha(dayReportCV, 0, fadeUIRate));
 
         // Remove Old
@@ -631,7 +659,6 @@ public class GameManager : MonoBehaviour
         }
 
         ShowGameEventTriggerOpporotunity._Instance.TryAddTrigger(getUpFromBedTrigger);
-        DayNightManager._Instance.EnableTimeFlow = true;
     }
 
     public void SetDayData()
@@ -793,10 +820,14 @@ public class GameManager : MonoBehaviour
         GameStarted = false;
         InGameUIActive = false;
         p_Input.LockInput = true;
+        LockMovement = true;
+        DayNightManager._Instance.EnableTimeFlow = false;
     }
 
     private IEnumerator EnemyMurderSequence()
     {
+        TransitionManager._Instance.Interrupt();
+
         enemyAnim.SetTrigger("Scream");
         CameraController.SetNewSubject(enemyMurderSubject);
 

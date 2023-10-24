@@ -60,6 +60,7 @@ public class CameraFollowSubject : MonoBehaviour
     [SerializeField] private PlayerFootstepsSoundController p_Footsteps;
 
     [Header("Transition Settings")]
+    [SerializeField] private float catchTransitionAfter = 3;
     [SerializeField] private float transitionPosGrace = 1;
     [SerializeField] private float transitionRotGrace = 1;
     private float transitionPosSpeed;
@@ -117,6 +118,7 @@ public class CameraFollowSubject : MonoBehaviour
 
         // set target pos here first so wait for transitions doesn't clear immedietely
         SetTargetPos();
+        SetTargetRot();
 
         if (currentSubjectData.UseTransition)
         {
@@ -133,17 +135,22 @@ public class CameraFollowSubject : MonoBehaviour
 
     private IEnumerator WaitForTransition(bool releaseMovementLockOnTransitionEnd)
     {
-        while (true)
+        float curBonusRotGrace = 0;
+        float curPosOfGrace = Vector3.Distance(transform.position, targetPos);
+        float t = 0;
+        while (curPosOfGrace > transitionPosGrace
+                || !MathHelper.QuaternionsApproximatelyEqual(transform.rotation, targetRot, transitionRotGrace + curBonusRotGrace))
         {
-            if (Vector3.Distance(transform.position, targetPos) < transitionPosGrace
-                && Vector3.Distance(transform.eulerAngles, targetRot.eulerAngles) < transitionRotGrace)
+            t += Time.deltaTime;
+            if (t > catchTransitionAfter)
             {
-                transform.position = targetPos;
-                transform.eulerAngles = targetRot.eulerAngles;
-                break;
+                curBonusRotGrace += Time.deltaTime;
             }
+            curPosOfGrace = Vector3.Distance(transform.position, targetPos);
             yield return null;
         }
+        transform.position = targetPos;
+        transform.rotation = targetRot;
         Transitioning = false;
         p_Input.LockInput = false;
         if (releaseMovementLockOnTransitionEnd)
@@ -155,6 +162,10 @@ public class CameraFollowSubject : MonoBehaviour
     public void SetToTargetPos()
     {
         transform.position = targetPos;
+    }
+    public void SetToTargetRot()
+    {
+        transform.rotation = targetRot;
     }
 
     private void SetTargetPos()
@@ -174,6 +185,25 @@ public class CameraFollowSubject : MonoBehaviour
                 targetPos = transform.position;
                 break;
             default:
+                break;
+        }
+    }
+
+    private void SetTargetRot()
+    {
+        switch (followStyle)
+        {
+            case CameraFollowStyle.LOOKAT_WITH_OFFSET:
+                targetRot = Quaternion.LookRotation(subject.transform.position - transform.position);
+                break;
+            case CameraFollowStyle.PURE_LOOKAT:
+                targetRot = Quaternion.LookRotation(subject.transform.position - transform.position);
+                break;
+            case CameraFollowStyle.MATCH_WITH_OFFSET:
+                targetRot = subject.transform.rotation;
+                break;
+            default:
+                targetRot = transform.rotation;
                 break;
         }
     }
@@ -222,21 +252,7 @@ public class CameraFollowSubject : MonoBehaviour
         }
         transform.position = Vector3.MoveTowards(transform.position, targetPos, Time.deltaTime * changePosRate);
 
-        switch (followStyle)
-        {
-            case CameraFollowStyle.LOOKAT_WITH_OFFSET:
-                targetRot = Quaternion.LookRotation(subject.transform.position - transform.position);
-                break;
-            case CameraFollowStyle.PURE_LOOKAT:
-                targetRot = Quaternion.LookRotation(subject.transform.position - transform.position);
-                break;
-            case CameraFollowStyle.MATCH_WITH_OFFSET:
-                targetRot = subject.transform.rotation;
-                break;
-            default:
-                targetRot = transform.rotation;
-                break;
-        }
+        SetTargetRot();
 
         // Looking
         // Determine Look Mod Changes

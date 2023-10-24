@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using System.Linq;
 
 [System.Serializable]
 public struct JournalEntry
@@ -24,7 +25,7 @@ public class Journal : MonoBehaviour
     [SerializeField] private int maxNumChars;
     [SerializeField] private int minCharsToCheckOff = 10;
     private bool journalWasActiveLastFrame;
-    private List<JournalEntry> journalEntries = new List<JournalEntry>();
+    private Dictionary<int, JournalEntry> journalEntries = new Dictionary<int, JournalEntry>();
     public bool IsJournalActive { get; set; }
 
     public void ResetJournalForDay(int day)
@@ -67,23 +68,28 @@ public class Journal : MonoBehaviour
 
     public void SaveJournalEntry(int day)
     {
+        JournalEntry saving;
         if (entryText.text.Equals(defaultEntryText))
         {
-            SaveJournalEntry(new JournalEntry(dayLeadIn + day.ToString(), "No Entry"));
+            saving = new JournalEntry(dayLeadIn + day.ToString(), "No Entry");
         }
         else
         {
-            SaveJournalEntry(new JournalEntry(dayLeadIn + day.ToString(), entryText.text));
+            saving = new JournalEntry(dayLeadIn + day.ToString(), entryText.text);
         }
-    }
 
-    private void SaveJournalEntry(JournalEntry entry)
-    {
-        journalEntries.Add(entry);
+        if (journalEntries.ContainsKey(day))
+        {
+            journalEntries[day] = saving;
+        }
+        else
+        {
+            journalEntries.Add(day, saving);
+        }
     }
 
     public List<JournalEntry> GetJournalEntries()
     {
-        return journalEntries;
+        return journalEntries.Values.ToList();
     }
 }

@@ -391,7 +391,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dialogueOnFailCondition:
-  - Text: I need to grab some dirt from the bucket first.
+  - Text: I need to grab some mulch from the bucket first.
     WaitTime: 0
     DestroyAfter: 3
   requiredAmount: 2.45

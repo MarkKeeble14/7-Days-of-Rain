@@ -24,8 +24,11 @@ public class TransitionManager : MonoBehaviour
 
     public TransitionDirection LastPlayedTransitionDirection { get; private set; }
 
-    public bool Transitioning
-    { get; private set; }
+    public bool Transitioning { get; private set; }
+    public void Interrupt()
+    {
+        StopAllCoroutines();
+    }
 
     private void Awake()
     {

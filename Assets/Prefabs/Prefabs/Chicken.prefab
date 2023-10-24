@@ -176,8 +176,8 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 92a3477c5e8f69e40b451130b7261cfb, type: 3}
     - {fileID: 8300000, guid: 12c40ffdf9e9a854bb7007c2f0dcca38, type: 3}
     - {fileID: 8300000, guid: c22681bd8879036458bd913bc8ba4e6a, type: 3}
-  minMaxTimeBetweenSounds: {x: 3, y: 6}
-  chanceToEmit: {x: 1, y: 2}
+  minMaxTimeBetweenSounds: {x: 5, y: 10}
+  chanceToEmit: {x: 1, y: 3}
 --- !u!82 &2739566961120912891
 AudioSource:
   m_ObjectHideFlags: 0

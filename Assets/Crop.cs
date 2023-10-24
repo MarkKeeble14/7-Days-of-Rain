@@ -102,6 +102,12 @@ public class Crop : MonoBehaviour
         if (HasGrownToday) return;
         NumHarvested++;
         tempAudioSource.PlayOneShot(onHarvest);
+
+        if (NumHarvested + NumDead == NumSpawned)
+        {
+            GameManager._Instance.LastCropHarvested();
+        }
+
         Destroy(gameObject);
     }
 

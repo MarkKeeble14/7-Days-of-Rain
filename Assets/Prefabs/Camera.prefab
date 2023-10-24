@@ -129,11 +129,12 @@ MonoBehaviour:
   p_Input: {fileID: 0}
   p_Footsteps: {fileID: 0}
   transitionPosGrace: 0.25
-  transitionRotGrace: 0.25
+  transitionRotGrace: 0.00001
   playerLookSpeed: 2.5
   verticalLookBounds: {x: -45, y: 45}
   horizontalLookBounds: {x: -45, y: 45}
   playerLookReleaseSpeed: 2.5
+  catchTransitionAfter: 5
 --- !u!114 &6491499957886219605
 MonoBehaviour:
   m_ObjectHideFlags: 0
