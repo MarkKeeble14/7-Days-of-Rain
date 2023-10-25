@@ -202,6 +202,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] private SimpleAudioClipContainer monsterMunching;
     [SerializeField] private float durationOfBlackScreenAfterKill = 1.25f;
 
+    private bool hasPlayedPostFirstEncounterDialogue;
+    [SerializeField] private Dialogue[] firstEncounterDialogue;
+
     public void BeginCoyoteSequence()
     {
         inCoyoteSequence = true;
@@ -211,6 +214,12 @@ public class GameManager : MonoBehaviour
 
     public void EndCoyoteSequence()
     {
+        if (!hasPlayedPostFirstEncounterDialogue && inCoyoteSequence)
+        {
+            hasPlayedPostFirstEncounterDialogue = true;
+            StartCoroutine(DialogueManager._Instance.ExecuteDialogue(firstEncounterDialogue));
+        }
+
         inCoyoteSequence = false;
         CanSprintDisplayController._Instance.CanSprint = false;
         nextCoyoteSequenceTimer = RandomHelper.RandomFloat(minMaxTimeTillNextCoyoteSequence);
@@ -228,6 +237,12 @@ public class GameManager : MonoBehaviour
     [ContextMenu("End Monster")]
     public void EndMonsterSequence()
     {
+        if (!hasPlayedPostFirstEncounterDialogue && inMonsterSequence)
+        {
+            hasPlayedPostFirstEncounterDialogue = true;
+            StartCoroutine(DialogueManager._Instance.ExecuteDialogue(firstEncounterDialogue));
+        }
+
         inMonsterSequence = false;
         monsterMovement.Sleep();
         CanSprintDisplayController._Instance.CanSprint = false;
@@ -413,18 +428,6 @@ public class GameManager : MonoBehaviour
         // Enable/Disable Objects
         EnableForGivenState(data);
         SetMixerState();
-
-        if (PlayerIsInside)
-        {
-            if (inCoyoteSequence)
-            {
-                EndCoyoteSequence();
-            }
-            if (inMonsterSequence)
-            {
-                EndMonsterSequence();
-            }
-        }
     }
 
     private void SetMixerState()
@@ -542,7 +545,7 @@ public class GameManager : MonoBehaviour
                 break;
             case 6:
                 // Last day allowed
-                RanOutOfTimeEnding();
+                RunEnding();
                 yield break;
             default:
                 break;
@@ -596,15 +599,7 @@ public class GameManager : MonoBehaviour
 
     public void LastCropHarvested()
     {
-        float result = (float)Crop.NumHarvested / Crop.NumSpawned;
-        if (result >= percentCropHarvestedDensityForGoodEnding)
-        {
-            GoodEnding();
-        }
-        else
-        {
-            BadEnding();
-        }
+        RunEnding();
     }
 
     public IEnumerator DayReport()
@@ -692,6 +687,9 @@ public class GameManager : MonoBehaviour
 
     public IEnumerator TooColdSequence()
     {
+        EndCoyoteSequence();
+        EndMonsterSequence();
+
         p_Input.LockInput = true;
         BeingForcedInsideForBeingTooCold = true;
         ShowGameEventTriggerOpporotunity._Instance.Clear();
@@ -720,6 +718,9 @@ public class GameManager : MonoBehaviour
 
     public IEnumerator ForceSleepSequence()
     {
+        EndCoyoteSequence();
+        EndMonsterSequence();
+
         p_Input.LockInput = true;
         BeingForcedToSleep = true;
         ShowGameEventTriggerOpporotunity._Instance.Clear();
@@ -758,52 +759,23 @@ public class GameManager : MonoBehaviour
         GameStarted = true;
     }
 
-    [ContextMenu("Bad Ending")]
-    public void BadEnding()
+    private void RunEnding()
     {
-        endingText.text = "A Lacklaster Harvest";
-        OnEnding();
-
-        AnimationActionSequenceEntry[] animationSequence = new AnimationActionSequenceEntry[2];
-        animationSequence[0] = new AnimationActionSequenceEntry("Fade", null, delegate
+        float result = (float)Crop.NumHarvested / Crop.NumSpawned;
+        if (result >= percentCropHarvestedDensityForGoodEnding)
         {
-            StartCoroutine(EndOfGameSequence());
-        }, 1, false, true);
-        TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
-    }
-
-    [ContextMenu("Ran Out of Time Ending")]
-    public void RanOutOfTimeEnding()
-    {
-        endingText.text = "Out of Time";
-        OnEnding();
-
-        AnimationActionSequenceEntry[] animationSequence = new AnimationActionSequenceEntry[2];
-        animationSequence[0] = new AnimationActionSequenceEntry("Fade", null, delegate
+            GoodEnding();
+        }
+        else
         {
-            StartCoroutine(EndOfGameSequence());
-        }, 1, false, true);
-        TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
-    }
-
-    [ContextMenu("Good Ending")]
-    public void GoodEnding()
-    {
-        endingText.text = "A Successful Harvest";
-        OnEnding();
-
-        AnimationActionSequenceEntry[] animationSequence = new AnimationActionSequenceEntry[2];
-        animationSequence[0] = new AnimationActionSequenceEntry("Fade", null, delegate
-        {
-            StartCoroutine(EndOfGameSequence());
-        }, 1, false, true);
-        TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
+            BadEnding();
+        }
     }
 
     [ContextMenu("Dead Ending")]
     public void DeadEnding()
     {
-        endingText.text = "You Died";
+        endingText.text = "You Died\nEnding 1/3";
         OnEnding();
 
         // Stop too Cold Sequence if it is happening
@@ -813,6 +785,35 @@ public class GameManager : MonoBehaviour
         }
 
         StartCoroutine(EnemyMurderSequence());
+    }
+
+    [ContextMenu("Bad Ending")]
+    public void BadEnding()
+    {
+        endingText.text = "A Lacklaster Harvest\nEnding 2/3";
+        OnEnding();
+
+        AnimationActionSequenceEntry[] animationSequence = new AnimationActionSequenceEntry[2];
+        animationSequence[0] = new AnimationActionSequenceEntry("Fade", null, delegate
+        {
+            StartCoroutine(EndOfGameSequence());
+        }, 1, false, true);
+        TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
+    }
+
+
+    [ContextMenu("Good Ending")]
+    public void GoodEnding()
+    {
+        endingText.text = "A Successful Harvest\nEnding 3/3";
+        OnEnding();
+
+        AnimationActionSequenceEntry[] animationSequence = new AnimationActionSequenceEntry[2];
+        animationSequence[0] = new AnimationActionSequenceEntry("Fade", null, delegate
+        {
+            StartCoroutine(EndOfGameSequence());
+        }, 1, false, true);
+        TransitionManager._Instance.StartCoroutine(TransitionManager._Instance.PlayAnimationWithActionsInBetween(animationSequence));
     }
 
     private void OnEnding()
